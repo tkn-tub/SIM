@@ -255,33 +255,34 @@ figure;
 i_T_init=3;
 
 p_1=plot(precision(:,i_T_init),'--o','LineWidth',2,'MarkerSize',8); grid on; hold on;
-legend_text{1}=strcat('$T=',num2str(T_x(i_T_init)),'\times ', num2str(T_y(i_T_init)),'$');
-
-
+legend_text{1}=strcat('$T_\mathrm{upd}=',num2str(T_x(i_T_init)),'\times ', num2str(T_y(i_T_init)),'$');
 
 for i_T=i_T_init+1:length(T)-1
     plot(precision(:,i_T),'-','LineWidth',2,'MarkerSize',8);
 end
 
 p_2=plot(precision(:,i_T),'-d','LineWidth',2,'MarkerSize',8);
-legend_text{2}=strcat('$T=',num2str(T_x(i_T+1)),'\times ', num2str(T_y(i_T+1)),'$');
+legend_text{2}=strcat('$T_\mathrm{upd}=',num2str(T_x(i_T+1)),'\times ', num2str(T_y(i_T+1)),'$');
 
 annotation("arrow",[0.3 0.3],[0.6 0.5],'Color','black','LineWidth',2,'LineStyle','--');
-text(0.3,0.5,{strcat('$T\_mathrm{upd}$ increases to $',num2str(T_x(end)),'\times ', num2str(T_y(end)),'$'),strcat('SNR$=',num2str(SNR_dB,3),'$ dB')},'Interpreter','latex','FontSize',font,'BackgroundColor','white');
+text(0.3,0.5,{strcat('$T_\mathrm{upd}$ increases to $',num2str(T_x(end)),'\times ', num2str(T_y(end)),'$'),strcat('SNR$=',num2str(SNR_dB,3),'$ dB')},'Interpreter','latex','FontSize',font,'BackgroundColor','white');
 
 
 lgd=legend([p_1 p_2],{legend_text{1:2}},...
     'Location','northwest','NumColumns',2,'Interpreter',"latex",'FontSize',font,'NumColumns',1);% more properties on the legend at https://www.mathworks.com/help/matlab/ref/legend.html
 
+for i_N=1:length(N)
+    X_Tick_text{i_N}=strcat('$',num2str(N_x(i_N)),'\times',num2str(N_y(i_N)),'$');
+end
 
 set(gca, 'XTick', [1:length(mean_relative_errors)]);
 set(gca, 'XTickLabel', [X_Tick_text], 'TickLabelInterpreter', 'latex');
 xtickangle(90);
 xlabel('$N_x \times N_y$','Interpreter','latex');
-ylabel({'Accuracy ($1-$Relative errors)'},'Interpreter','latex');
+ylabel({'Precision ($1-$Relative errors)'},'Interpreter','latex');
 set(gca,'FontSize',font);
-saveas(gcf, './results/plot_accuracy_vs_N.svg');
-saveas(gcf, './results/plot_accuracy_vs_N.fig');
+saveas(gcf, './results/plot_precision_vs_N.svg');
+saveas(gcf, './results/plot_precision_vs_N.fig');
 
 %% Calculation of energy consumption, see [3]
 % Description: The power is evaluated with respect to the 
@@ -302,38 +303,77 @@ close all
 figure;
 i_T_init=3;
       
-p_1=plot(E_total(:,i_T_init),'--o','LineWidth',2,'MarkerSize',8); grid on; hold on;
-legend_text{1}=strcat('$T=',num2str(T_x(i_T_init)),'\times ', num2str(T_y(i_T_init)),'$');
+p_1=plot(E_total(:,i_T_init)*1e3,'--o','LineWidth',2,'MarkerSize',8); grid on; hold on;
+legend_text{1}=strcat('$T_\mathrm{upd}=',num2str(T_x(i_T_init)),'\times ', num2str(T_y(i_T_init)),'$');
 
 for i_T=i_T_init+1:length(T)-1
-    plot(E_total(:,i_T),'-','LineWidth',2,'MarkerSize',8);
+    plot(E_total(:,i_T)*1e3,'-','LineWidth',2,'MarkerSize',8);
 end
 
-p_2=plot(E_total(:,i_T),'-d','LineWidth',2,'MarkerSize',8);
-legend_text{2}=strcat('$T=',num2str(T_x(i_T+1)),'\times ', num2str(T_y(i_T+1)),'$');
+p_2=plot(E_total(:,i_T)*1e3,'-d','LineWidth',2,'MarkerSize',8);
+legend_text{2}=strcat('$T_\mathrm{upd}=',num2str(T_x(i_T+1)),'\times ', num2str(T_y(i_T+1)),'$');
 
 lgd=legend([p_1 p_2],{legend_text{1:2}},...
     'Location','northwest','NumColumns',2,'Interpreter',"latex",'FontSize',font,'NumColumns',1);% more properties on the legend at https://www.mathworks.com/help/matlab/ref/legend.html
 
 annotation("arrow",[0.3 0.3],[0.6 0.5],'Color','black','LineWidth',2,'LineStyle','--');
-text(0.3,0.3,{strcat('$T_\mathrm{upd}$ increases to $',num2str(T_x(end)),'\times ', num2str(T_y(end)),'$'),strcat('SNR$=',num2str(SNR_dB,3),'$ dB')},'Interpreter','latex','FontSize',font,'BackgroundColor','white');
+text(0.3,0.3,{'$T_\mathrm{upd}$ increases'},'Interpreter','latex','FontSize',font,'BackgroundColor','white');
 
+for i_N=1:length(N)
+    X_Tick_text{i_N}=strcat('$',num2str(N_x(i_N)),'\times',num2str(N_y(i_N)),'$');
+end
 
 set(gca, 'XTick', [1:length(mean_relative_errors)]);
 set(gca, 'XTickLabel', [X_Tick_text], 'TickLabelInterpreter', 'latex');
 xtickangle(90);
 xlabel('$N_x \times N_y$','Interpreter','latex');
-ylabel({'Energy consumption [J]'},'Interpreter','latex');
+ylabel({'Energy consumption [mJ]'},'Interpreter','latex');
 set(gca,'FontSize',font);
 saveas(gcf, './results/plot_Energy_vs_N.svg');
 saveas(gcf, './results/plot_Energy_vs_N.fig');
+
+%% Precision vs energy
+close all;
+
+figure;
+i_T_init=3;
+      
+p_1=loglog(E_total(:,i_T_init),precision(:,i_T_init),'--o','LineWidth',2,'MarkerSize',8); grid on; hold on;
+legend_text{1}=strcat('$T_\mathrm{upd}=',num2str(T_x(i_T_init)),'\times ', num2str(T_y(i_T_init)),'$');
+
+for i_T=i_T_init+1:length(T)-1
+    loglog(E_total(:,i_T),precision(:,i_T),'-','LineWidth',2,'MarkerSize',8);
+end
+
+p_2=semilogy(E_total(:,i_T),precision(:,i_T),'-d','LineWidth',2,'MarkerSize',8);
+legend_text{2}=strcat('$T_\mathrm{upd}=',num2str(T_x(i_T+1)),'\times ', num2str(T_y(i_T+1)),'$');
+
+lgd=legend([p_1 p_2],{legend_text{1:2}},...
+    'Location','northwest','NumColumns',2,'Interpreter',"latex",'FontSize',font,'NumColumns',1);% more properties on the legend at https://www.mathworks.com/help/matlab/ref/legend.html
+
+annotation("arrow",[0.3 0.3],[0.6 0.5],'Color','black','LineWidth',2,'LineStyle','--');
+text(0.3,0.5,{strcat('$T_\mathrm{upd}$ increases to $',num2str(T_x(end)),'\times ', num2str(T_y(end)),'$'),strcat('SNR$=',num2str(SNR_dB,3),'$ dB')},'Interpreter','latex','FontSize',font,'BackgroundColor','white');
+
+x_data=p_2.XData;
+for i_E=1:length(x_data)
+    X_Tick_text{i_E}=strcat('$',num2str(x_data(i_E)*1e3,4),'$');
+end
+
+set(gca, 'XTick', x_data(1:2:end));
+set(gca, 'XTickLabel', [X_Tick_text(1:2:end)], 'TickLabelInterpreter', 'latex');
+xtickangle(90);
+xlabel('Energy [mJ]','Interpreter','latex');
+ylabel({'Precision as ($1-$Relative errors)'},'Interpreter','latex');
+set(gca,'FontSize',font);
+saveas(gcf, './results/plot_precision_vs_Energy.svg');
+saveas(gcf, './results/plot_precision_vs_Energy.fig');
 
 %% Calculation of energy efficiency
 
 %evaluating the energy efficiency
 EE=I./E_total;
 EE=E_total/max(max(E_total));
-EE=accu./E_total/max(max(E_total));
+EE=precision./E_total/max(max(E_total));
 
 
 
@@ -356,7 +396,9 @@ lgd=legend([p_1 p_2],{legend_text{1:2}},...
 annotation("arrow",[0.3 0.3],[0.6 0.5],'Color','black','LineWidth',2,'LineStyle','--');
 text(0.3,0.3,{strcat('$T_\mathrm{upd}$ increases to $',num2str(T_x(end)),'\times ', num2str(T_y(end)),'$'),strcat('SNR$=',num2str(SNR_dB,3),'$ dB')},'Interpreter','latex','FontSize',font,'BackgroundColor','white');
 
-
+for i_T=i_T_init:length(T)
+    X_Tick_text{i}=strcat('$',num2str(N_x(i)),'\times',num2str(N_y(i)),'$');
+end
 set(gca, 'XTick', [1:length(mean_relative_errors)]);
 set(gca, 'XTickLabel', [X_Tick_text], 'TickLabelInterpreter', 'latex');
 xtickangle(90);
