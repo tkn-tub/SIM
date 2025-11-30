@@ -1,12 +1,16 @@
-# Direction of Arrival Estimator (DoA)
-This project evaluates the performance of an FFT-based algorithm for estimating the DoA as implemented in a stacked intelligent metasurface (SIM).
+# Smart SIM for DoA estimation
+Smart SIM project evaluates an FFT-based DoA estimation algorithm with reinforcement learning on the waveform domain.
 
 ## Description
-This project develops the FFT algorithm on an SIM to evaluate its performance for detecting the direction of arrival (DoA) of a mobile user.
+SIM (Stacked Intelligent Metasurface) is a MATLAB-based framework that implements the 2D Discrete Fourier Transforms (2D-DFT) directly in the waveform domain.
+The repository reproduces and extends results from ref. [1] by including a reinforcement learning (RL) module also through a SIM.
+This solutions aims to fast localize multiple users in an indoor scenario.
+
+The system archicture is represented in Fig. 1, where mu
 
 <figure>
     <p align="center">
-        <img src="https://github.com/tkn-tub/SIM/blob/main/figures/DOA_System_Model.PNG?raw=true" alt="nn" width="200">
+        <img src="https://github.com/tkn-tub/SIM/blob/main/figures/DOA_System_Model.SVG?raw=true" alt="nn" width="200">
     </p>
 </figure>
 <p align="center">
@@ -59,8 +63,8 @@ This project was supported in part by the Federal Ministry of Education and Rese
 
     [![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github)](https://github.com/kareltdlg)
 
-    [![Email](https://img.shields.io/badge/Email-jorge.torresgomez@ieee.org-D14836?logo=gmail&logoColor=white)](mailto:karel.toledo@usach.cl)
+    [![Email](https://img.shields.io/badge/Email-karel.toledo@usach.cl-D14836?logo=gmail&logoColor=white)](mailto:karel.toledo@usach.cl)
 
-    [![LinkedIn](https://img.shields.io/badge/LinkedIn-torresgomez-blue?logo=linkedin&style=flat-square)](https://www.linkedin.com/in/karel-toledo-de-la-garza-a38ab6a1/)
+    [![LinkedIn](https://img.shields.io/badge/LinkedIn-kareltoledo-blue?logo=linkedin&style=flat-square)](https://www.linkedin.com/in/karel-toledo-de-la-garza-a38ab6a1/)
 
     [![Website Badge](https://img.shields.io/badge/Website-Homepage-blue?logo=web)](https://die.usach.cl/karel-toledo-delagarza/)
