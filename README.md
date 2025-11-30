@@ -1,21 +1,39 @@
 # Smart SIM for DoA estimation
-Smart SIM project evaluates an FFT-based DoA estimation algorithm with reinforcement learning on the waveform domain.
+Smart SIM project evaluates an FFT-based direction-of-arrival DoA estimation algorithm with reinforcement learning on the waveform domain.
 
 ## Description
-SIM (Stacked Intelligent Metasurface) is a MATLAB-based framework that implements the 2D Discrete Fourier Transforms (2D-DFT) directly in the waveform domain.
-The repository reproduces and extends results from ref. [1] by including a reinforcement learning (RL) module also through a SIM.
-This solutions aims to fast localize multiple users in an indoor scenario.
+SIM (Stacked Intelligent Metasurface) constitutes a MATLAB-based framework that executes the 2D Discrete Fourier Transforms (2D-DFT) explicitly within the waveform domain.
+The repository replicates and advances the findings of reference [1] by incorporating a reinforcement learning (RL) component, also via a SIM.
+This approach is designed to efficiently localize multiple users within an indoor environment, facilitated by the RL agent.
 
-The system archicture is represented in Fig. 1, where mu
+The system archicture is represented in Fig. 1, where SIM 1 develops the 2D-DFT, and its output is passed to the SIM 2 that estimates the electric angles of arrival.
+The architecture operates as follows:
+
+- Mobile users transmit baseband single-carrier pulses modeled as $a(\psi_x,\psi_y)\times s$ over the time interval $T$, where $s$ is constant, and $a(\psi_x,\psi_y)$ represents the Kronecker product of the spatial sequences$e^{j\psi_x(n_x-1)}$ and $e^{j\psi_y(n_y-1)}$, see [1, Eq. (3)-(5)].
+The complex exponential indicates the phase introduced by the users' spatial positions, determined by the electric angles $\psi_x$ and $\psi_y$, and indices $n_x$ and $n_y$ referring to the first layer in SIM 1.
+- The SIM 1 evaluates the 2D-DFT of the emitted signals by the mobile users.
+Its toput evaluates magnitude the of the 2D-DFT and its peaks signals the coordinates of the electrica angles in the $x$ and $y$ axis.
+See an example in Fig. 2, as the output produced by SIM 1
+- The ouput of SIM 2 provides the estimated angles $\psi_x$ and $\psi_y$ of the peak in the 2D-DFT plain.
 
 <figure>
     <p align="center">
-        <img src="https://github.com/tkn-tub/SIM/blob/main/figures/DOA_System_Model.SVG?raw=true" alt="nn" width="200">
+        <img src="https://github.com/tkn-tub/SIM/blob/main/figures/DOA_System_Model.svg?raw=true" alt="nn" width="400">
     </p>
 </figure>
 <p align="center">
-Fig. 1: Representation of the system model with the mobile user (MU) and the SIM.
+Fig. 1: Representation of the system model with the mobile user (MU) and the two SIMs.
 </p>
+
+<figure>
+    <p align="center">
+        <img src="https://github.com/tkn-tub/SIM/blob/main/figures/DFT_angle_estimation.svg?raw=true" alt="nn" width="400">
+    </p>
+</figure>
+<p align="center">
+Fig. 2: 2D-DFT output as derived at the output of the SIM 1.
+</p>
+
 
 
 ## Installation
