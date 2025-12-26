@@ -4,6 +4,13 @@
 clc;
 clear all;
 close all;
+
+%including all parent folders up to the file 'code', this makes visible all
+%files within this code, which includes the COBRA toolbox you need first to
+%download as follows from the intr
+addingPathParentFolderByName('code');
+
+
 Parameters %loading the system parameters
 
 %%Uncomment the line below for recalculating the parameters
