@@ -55,10 +55,10 @@ This code is tested in MATLAB 2025a, and the required toolboxes are listed in th
 This project directly runs from the Matlab accesible on each folder within the folder code [code/](https://github.com/tkn-tub/SIM/tree/main/code).
 Within this folder you find the following ones:
 
-├── [DoA/](https://github.com/tkn-tub/SIM/tree/main/DoA): Includes the code to estimate the electric angles $\psi_x$ and $\psi_y$ of a single user using the SIM 1.
+📁 [DoA/](https://github.com/tkn-tub/SIM/tree/main/DoA): Includes the code to estimate the electric angles $\psi_x$ and $\psi_y$ of a single user using the SIM 1.
 In this code the received signal model follows the linear transformation model $\sqrt{\rho}\boldsymbol{a}(\psi_x,\psi_y)\times s+\boldsymbol{u}$, where $\rho$ refers to the signal-to-noise ratio (SNR) and $u$ refers to a CSCG random vector of average value zero and variance $1$. 
 
-├── [Channel Model/](https://github.com/tkn-tub/SIM/tree/main/Channel_Model):  This folder includes a clustered-delay-line (CDL) model for the received signal, which mimics indoor industrial scenarios.
+📁 [Channel Model/](https://github.com/tkn-tub/SIM/tree/main/Channel_Model):  This folder includes a clustered-delay-line (CDL) model for the received signal, which mimics indoor industrial scenarios.
 
 
 ## Features
