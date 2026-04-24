@@ -1,8 +1,31 @@
 # Reinforcement learning component
-Implements the reinforcement learning (RL) component as hosted at the stacked intelligent metasurface (SIM) hardware.
+This code implements a DQN-based RL agent whose Q-network is physically embodied in SIM 2
 
 ## Description
-This code implements .
+This code implements a DQN-based where the RL agent whose Q-network is physically embodied in SIM 2, and the optimal policy is implemented digitally with the pre-computed values by the SIM 2, see Fig. 1 below.
+The metasurface layers themselves act as the network, so the forward pass is performed by optical propagation through SIM 2 rather than by digital compute.
+Within this architecture, the definition of states and actions follows the description
+
+- **State** $s_t$: Given by the 2D-DFT plane $\mathfrak{F}(t)$ produced by SIM 1 and observed
+  at the input layer of SIM 2. Each state is a snapshot of the angular spectrum
+  in the $(\psi_x, \psi_y)$ grid, where peaks indicate the directions of arrival
+  of the mobile users at time $t$.
+- **Action** $a_t = (\Delta\psi_x, \Delta\psi_y)$: Is formulated as the discrete increment applied
+  to the phase-shift configuration $\xi_{0,t}$ of the first layer of SIM 1.
+  The action set is the finite grid of admissible $(\Delta\psi_x, \Delta\psi_y)$
+  pairs that steer the observation window to track the users between snapshots.
+- **Reward** $r_t = r(\Delta\psi_x, \Delta\psi_y)$: *[describe your reward here —
+  e.g., the received energy at the predicted user bin, or the negative tracking
+  error between the predicted and observed peak positions at $t+1$].*
+- **Policy** $\pi(a_t \mid s_t)$: $\varepsilon$-greedy over the action-value
+  function $Q(s_t, a_t)$.
+  The $Q(s_t, a_t)$ is approximated by the neural network embedded in SIM 2.
+  With probability $(1-\varepsilon)$ the agent selects
+  $a_t = \arg\max_{a} Q(s_t, a)$; with probability $\varepsilon$ it samples
+  uniformly from the action set to encourage exploration.
+  The value of $\varepsilon$ decays over training episodes.
+
+The RL agent is implemented within the file [<img src="docs/matlab_icon.png" alt="MATLAB" width="16"/> `SIM_1_SIM_2_DQN_AI.mlx`](SIM_1_SIM_2_DQN_AI.mlx).
 
 The system archicture is represented in Fig. 1, where SIM 1 develops the 2D-DFT, and its output is passed to the SIM 2 that estimates the electric angles of arrival.
 The architecture operates as follows:
