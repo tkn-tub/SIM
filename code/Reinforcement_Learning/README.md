@@ -25,8 +25,8 @@ Within this architecture, the definition of states and actions follows the descr
   uniformly from the action set to encourage exploration.
   The value of $\varepsilon$ decays over training episodes.
 
-The RL agent is implemented within the file ![MATLAB](docs/matlab_icon.png) [`SIM_1_SIM_2_DQN_AI.mlx`](SIM_1_SIM_2_DQN_AI.mlx).
-<!--[<img src="docs/matlab_icon.png" alt="MATLAB" width="16"/> `SIM_1_SIM_2_DQN_AI.mlx`](SIM_1_SIM_2_DQN_AI.mlx).-->
+The RL agent is implemented within the file [<img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="MATLAB" width="16"/> `SIM_1_SIM_2_DQN_AI.mlx`](SIM_1_SIM_2_DQN_AI.mlx).
+
 
 The system archicture is represented in Fig. 1, where SIM 1 develops the 2D-DFT, and its output is passed to the SIM 2 that estimates the electric angles of arrival.
 The architecture operates as follows:
