@@ -1,5 +1,5 @@
 # Smart SIM for DoA estimation
-Smart SIM project evaluates an FFT-based direction-of-arrival DoA estimation algorithm with reinforcement learning on the waveform domain.
+Smart SIM project evaluates an FFT-based direction-of-arrival DoA estimation algorithm with reinforcement learning on the waveform domain. 
 
 ## Description
 SIM (Stacked Intelligent Metasurface) constitutes a MATLAB-based framework that executes the 2D Discrete Fourier Transforms (2D-DFT) explicitly within the waveform domain.
