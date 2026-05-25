@@ -1,10 +1,23 @@
 # Reinforcement learning component
-This code implements a DQN-based RL agent whose Q-network is physically embodied in SIM 2
+This code implements a DQN-based reinforcement learning (RL) agent whose Q-network is physically embodied in a SIM.
 
 ## Description
-This code implements a DQN-based where the RL agent whose Q-network is physically embodied in SIM 2, and the optimal policy is implemented digitally with the pre-computed values by the SIM 2, see Fig. 1 below.
-The metasurface layers themselves act as the network, so the forward pass is performed by optical propagation through SIM 2 rather than by digital compute.
-Within this architecture, the definition of states and actions follows the description
+This code implements a DQN-based RL agent whose $Q$-network is physically embodied in a SIM, and the optimal policy is implemented digitally.
+The aim of the RL agent is to configure the evaluation of the 2D-DFT operation, where an angle shift is introduced for enhanced accuracy.
+The agent operates by observing the 2D-DFT amplitude, and aims to implement a policy where the spreading of their peaks is reduced.
+As illustrated in Fig. 1 below, the SIM 1 evaluates the 2D-DFT of the received signal and SIM 2 hosts the neural network (NN) that computes the $Q$ values.
+In the SIM 2, the metasurface layers themselves act as the network, so the forward pass is performed by electromagnetic propagation through SIM 2 rather than by digital compute.
+
+<figure>
+    <p align="center">
+        <img src="https://github.com/tkn-tub/SIM/blob/main/figures/DOA_System_Model.svg?raw=true" alt="nn" width="400">
+    </p>
+</figure>
+<p align="center">
+Fig. 1: Representation of the system model with the mobile user (MU) and the two SIMs.
+</p>
+
+Within the RL architecture, the definition of states and actions follows the description:
 
 - **State** $s_t$: Given by the 2D-DFT plane $\mathfrak{F}(t)$ produced by SIM 1 and observed
   at the input layer of SIM 2. Each state is a snapshot of the angular spectrum
@@ -25,7 +38,9 @@ Within this architecture, the definition of states and actions follows the descr
   uniformly from the action set to encourage exploration.
   The value of $\varepsilon$ decays over training episodes.
 
-The RL agent is implemented within the file [<img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="MATLAB" width="16"/> `SIM_1_SIM_2_DQN_AI.mlx`](SIM_1_SIM_2_DQN_AI.mlx).
+The RL agent is implemented and trained within the file [<img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="MATLAB" width="16"/> `SIM_1_SIM_2_DQN_AI.mlx`](SIM_1_SIM_2_DQN_AI.mlx) and the code is organized following the various components of the DQN agent as follows:
+
+
 
 
 The system archicture is represented in Fig. 1, where SIM 1 develops the 2D-DFT, and its output is passed to the SIM 2 that estimates the electric angles of arrival.
@@ -43,14 +58,7 @@ The SIM 1 operates as indicated in [1, Sec. III], where three main parameters ar
 The ouput of SIM 2 provides the estimated angles $\psi_x$ and $\psi_y$ of the peak in the 2D-DFT plain.
 That is the values for $\hat\psi_x$ and $\hat\psi_y$.
 
-<figure>
-    <p align="center">
-        <img src="https://github.com/tkn-tub/SIM/blob/main/figures/DOA_System_Model.svg?raw=true" alt="nn" width="400">
-    </p>
-</figure>
-<p align="center">
-Fig. 1: Representation of the system model with the mobile user (MU) and the two SIMs.
-</p>
+
 
 <figure>
     <p align="center">
@@ -102,6 +110,16 @@ This project was supported in part by the Federal Ministry of Education and Rese
 
 ## Contact Information
 
+- **Name:** Karel Toledo de la Garza
+
+    [![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github)](https://github.com/kareltdlg)
+
+    [![Email](https://img.shields.io/badge/Email-karel.toledo@usach.cl-D14836?logo=gmail&logoColor=white)](mailto:karel.toledo@usach.cl)
+
+    [![LinkedIn](https://img.shields.io/badge/LinkedIn-kareltoledo-blue?logo=linkedin&style=flat-square)](https://www.linkedin.com/in/karel-toledo-de-la-garza-a38ab6a1/)
+
+    [![Website Badge](https://img.shields.io/badge/Website-Homepage-blue?logo=web)](https://die.usach.cl/karel-toledo-delagarza/)
+
 - **Name:** Jorge Torres Gómez
 
     [![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github)](https://github.com/jorge-torresgomez)
@@ -112,12 +130,3 @@ This project was supported in part by the Federal Ministry of Education and Rese
 
     [![Website Badge](https://img.shields.io/badge/Website-Homepage-blue?logo=web)](https://www.tkn.tu-berlin.de/team/torres-gomez/)
 
-- **Name:** Karel Toledo de la Garza
-
-    [![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github)](https://github.com/kareltdlg)
-
-    [![Email](https://img.shields.io/badge/Email-karel.toledo@usach.cl-D14836?logo=gmail&logoColor=white)](mailto:karel.toledo@usach.cl)
-
-    [![LinkedIn](https://img.shields.io/badge/LinkedIn-kareltoledo-blue?logo=linkedin&style=flat-square)](https://www.linkedin.com/in/karel-toledo-de-la-garza-a38ab6a1/)
-
-    [![Website Badge](https://img.shields.io/badge/Website-Homepage-blue?logo=web)](https://die.usach.cl/karel-toledo-delagarza/)
