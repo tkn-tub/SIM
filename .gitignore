@@ -11,3 +11,9 @@ DoA/Parameters.asv
 *.asv
 /code/Antenna_CST/unit_cell_cao2024broadband
 /code/unit_cell_cao2024broadband
+/code/Antenna_CST/cao2024broadband/cao_unit_cell_M2M3M4_only
+/code/Antenna_CST/cao2024broadband/cao_unit_cell_receiver_M2M3
+/code/Antenna_CST/cao2024broadband/cao_unit_cell_receiver_only
+/code/Antenna_CST/cao2024broadband/cao_unit_cell_transmitter_only
+/code/Antenna_CST/cao2024broadband/results_may_27
+/code/Antenna_CST/cao2024broadband/unit_cell_cao2024broadband
