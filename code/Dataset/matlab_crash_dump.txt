@@ -1,0 +1,76 @@
+
+--------------------------------------------------------------------------------
+                Assertion detected at 2026-05-31 04:20:09 +0200
+--------------------------------------------------------------------------------
+
+Configuration:
+  Crash Decoding           : Disabled - No sandbox or build area path
+  Crash Mode               : continue (default)
+  Default Encoding         : UTF-8
+  Deployed                 : false
+  GNU C Library            : 2.36 stable
+  Graphics Driver          : Uninitialized hardware 
+  Graphics card 1          : 0x10de ( 0x10de ) 0x2321 Version 535.261.3.0 (0-0-0)
+  Graphics card 2          : 0x1a03 ( 0x1a03 ) 0x2000 Version 0.0.0.0 (0-0-0)
+  MATLAB Architecture      : glnxa64
+  MATLAB Entitlement ID    : 6757305
+  MATLAB Root              : /opt/matlab/2025b
+  MATLAB Version           : 25.2.0.2998904 (R2025b)
+  OpenGL                   : hardware
+  Operating System         : Debian GNU/Linux 12 (bookworm)
+  Process ID               : 183632
+  Processor ID             : x86 Family 25 Model 17 Stepping 1, AuthenticAMD
+  Session Key              : 8e8ts01nw2p23dn7hlzfgn3gx
+  Window System            : Moba/X (12101021), display localhost:12.0
+
+Fault Count: 1
+
+
+Assertion in find at management.cpp line 793:
+find: no active context for type '(anonymous namespace)::USMDispInfoVector'
+
+Current Thread: 'MCR Main thread' id 139824727037632
+
+Register State (captured):
+  RAX = 0000000000000000  RBX = 00007f2ba8f5f3a8
+  RCX = 0000000000000000  RDX = 00007f2ba8f58d18
+  RSP = 00007f2b7b2f7000  RBP = 00007f2b7b2f73e0
+  RSI = 00007f2ba8f3db15  RDI = 00007f2b7b2f7010
+
+   R8 = 0000000000000001   R9 = 00007f2b7b2f72f0
+  R10 = 0000000000000000  R11 = 0000000000000000
+  R12 = 00007f2ba8f6f428  R13 = 00007f2ba8f3db15
+  R14 = 00007f2ba7c17717  R15 = 00007f2ba7c1799f
+
+  RIP = 00007f2ba8ee114f  EFL = 0000000000000000
+
+   CS = 0000   FS = 0000   GS = 0000
+
+Stack Trace (captured):
+[  0] 0x00007f2ba8edabe3           /opt/matlab/2025b/bin/glnxa64/libmwfl.so+00326627
+[  1] 0x00007f2ba8edae2c           /opt/matlab/2025b/bin/glnxa64/libmwfl.so+00327212 _ZN10foundation4core4diag15stacktrace_base7captureEm+00000028
+[  2] 0x00007f2ba8edf2ff           /opt/matlab/2025b/bin/glnxa64/libmwfl.so+00344831
+[  3] 0x00007f2ba8edf3b0           /opt/matlab/2025b/bin/glnxa64/libmwfl.so+00345008
+[  4] 0x00007f2ba7c0313e /opt/matlab/2025b/bin/glnxa64/libmwfoundation_usm.so+00078142
+[  5] 0x00007f2ba7c15879 /opt/matlab/2025b/bin/glnxa64/libmwfoundation_usm.so+00153721 _ZN10foundation3usm6DetailINS0_5scope7ProcessEE4findEmRKSt9type_info+00000185
+[  6] 0x00007f2b58270b5f /opt/matlab/2025b/bin/glnxa64/matlab_startup_plugins/matlab_graphics_ui/../../../../bin/glnxa64/libmwuix.so+00498527
+[  7] 0x00007f2b58271b08 /opt/matlab/2025b/bin/glnxa64/matlab_startup_plugins/matlab_graphics_ui/../../../../bin/glnxa64/libmwuix.so+00502536
+[  8] 0x00007f2b5826e48c /opt/matlab/2025b/bin/glnxa64/matlab_startup_plugins/matlab_graphics_ui/../../../../bin/glnxa64/libmwuix.so+00488588
+[  9] 0x00007f2ba17068df          /opt/matlab/2025b/bin/glnxa64/libX11.so.6+00293087 _XIOError+00000095
+[ 10] 0x00007f2ba1704941          /opt/matlab/2025b/bin/glnxa64/libX11.so.6+00284993 _XReply+00000977
+[ 11] 0x00007f2ba16fff7d          /opt/matlab/2025b/bin/glnxa64/libX11.so.6+00266109 XSync+00000061
+[ 12] 0x00007f2ba16e213b          /opt/matlab/2025b/bin/glnxa64/libX11.so.6+00143675 XCloseDisplay+00000123
+[ 13] 0x00007f2b58271640 /opt/matlab/2025b/bin/glnxa64/matlab_startup_plugins/matlab_graphics_ui/../../../../bin/glnxa64/libmwuix.so+00501312
+[ 14] 0x00007f2b58271819 /opt/matlab/2025b/bin/glnxa64/matlab_startup_plugins/matlab_graphics_ui/../../../../bin/glnxa64/libmwuix.so+00501785
+[ 15] 0x00007f2ba7c05785 /opt/matlab/2025b/bin/glnxa64/libmwfoundation_usm.so+00087941
+[ 16] 0x00007f2ba7c05bc8 /opt/matlab/2025b/bin/glnxa64/libmwfoundation_usm.so+00089032
+[ 17] 0x00007f2ba7c05fdc /opt/matlab/2025b/bin/glnxa64/libmwfoundation_usm.so+00090076 _ZN10foundation3usm10management7ContextINS0_5scope7ProcessEE7destroyEv+00000028
+[ 18] 0x00007f2ba812ebe7          /opt/matlab/2025b/bin/glnxa64/libmwmvm.so+03337191 _ZN3mvm6detail11SessionImpl31privateDeactivateProcessContextEv+00000199
+[ 19] 0x00007f2ba812f071          /opt/matlab/2025b/bin/glnxa64/libmwmvm.so+03338353 _ZN3mvm6detail11SessionImpl9terminateEv+00000385
+[ 20] 0x00007f2b99297c9a     /opt/matlab/2025b/bin/glnxa64/libmwMVMLocal.so+00662682
+[ 21] 0x00007f2ba812dee3          /opt/matlab/2025b/bin/glnxa64/libmwmvm.so+03333859
+[ 22] 0x00007f2b99007dcd          /opt/matlab/2025b/bin/glnxa64/libmwmcr.so+00781773
+[ 23] 0x00007f2ba83eeb17 /opt/matlab/2025b/bin/glnxa64/libmwboost_thread.so.1.81.0+00043799
+[ 24] 0x00007f2ba90a71f5                    /lib/x86_64-linux-gnu/libc.so.6+00561653
+[ 25] 0x00007f2ba91278ec                    /lib/x86_64-linux-gnu/libc.so.6+01087724
+
