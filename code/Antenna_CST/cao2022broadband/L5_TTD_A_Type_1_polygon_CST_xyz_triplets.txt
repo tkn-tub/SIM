@@ -1,5 +1,5 @@
 d+slot_w/2 0 (z_L5+z_L6)/2
-d-s_center 0 (z_L5+z_L6)/2
-d-s_center s_center (z_L5+z_L6)/2
-0 s_center (z_L5+z_L6)/2
-0 d (z_L5+z_L6)/2
+s_center/2 0 (z_L5+z_L6)/2
+s_center/2 s_center/2 (z_L5+z_L6)/2
+0 s_center/2 (z_L5+z_L6)/2
+0 d+slot_w/2 (z_L5+z_L6)/2
