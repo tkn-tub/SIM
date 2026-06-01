@@ -46,10 +46,10 @@ ___________________________________________________________________________
 
 Receiver Antenna
 
-Ingoing Field
-Zmax In e1  = y-polarization
-Zmax In e2  = x- polarization
+Incident Field
+Zmin In e1  = y-polarization
+Zmin In e2  = x- polarization
 
 Outgoing Field with Zmin
-Zmin Out e1 = y-polarization
+Zmax Out e1 = y-polarization
 Zmin Out e2 = x-polarization
