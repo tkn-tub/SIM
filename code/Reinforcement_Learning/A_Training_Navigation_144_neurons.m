@@ -7,7 +7,7 @@ Parameters;   % loads all base variables into workspace and EnvPars
 Calibration
 
 % In A_Training_Navigation.mlx — after Calibration runs
-EnvPars.MaxEpisodes = EnvPars.N_cal * 400;
+EnvPars.MaxEpisodes = EnvPars.N_cal * 200;
 %%
 %% ── 5. ENVIRONMENT ───────────────────────────────────────────────────────
 env = rlFunctionEnv(ObsInfo, ActInfo, ...
@@ -19,9 +19,9 @@ env = rlFunctionEnv(ObsInfo, ActInfo, ...
 % Output: n_actions Q-values
 statePath = [
     featureInputLayer(EnvPars.N + 2, 'Name', 'obs')
-    fullyConnectedLayer(128, 'Name', 'fc1')
+    fullyConnectedLayer(144, 'Name', 'fc1')
     reluLayer('Name', 'relu1')
-    fullyConnectedLayer(128, 'Name', 'fc2')
+    fullyConnectedLayer(81, 'Name', 'fc2')
     reluLayer('Name', 'relu2')
     fullyConnectedLayer(EnvPars.n_actions, 'Name', 'output')];
 
@@ -63,7 +63,7 @@ fprintf('N_cal=%d  |  MaxEpisodes=%d  |  MaxSteps=%d  |  n_actions=%d\n', ...
 trainingStats = train(agent, env, trainOpts);
 
 %% ── 9. SAVE ──────────────────────────────────────────────────────────────
-save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation.mat');
+save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_144_neurons.mat');
 criticNet = getModel(getCritic(agent));
 save(save_path, 'agent', 'trainingStats', 'criticNet', 'EnvPars');
 fprintf('Agent saved to %s\n', save_path);
