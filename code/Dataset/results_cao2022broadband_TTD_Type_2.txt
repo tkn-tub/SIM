@@ -44,3 +44,35 @@ l_2_segment_TTD = 1.3*mic_w
 ID: 12
 l_1_segment_TTD = 2.7*mic_w
 l_2_segment_TTD = 1.5*mic_w
+
+ID: 13
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 1.7*mic_w
+
+ID: 14
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 1.9*mic_w
+
+ID: 15
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 2.1*mic_w#
+
+ID: 16
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 2.3*mic_w
+
+ID: 17
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 2.5*mic_w
+
+ID: 18
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 2.7*mic_w
+
+ID: 21
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 2.7*mic_w
+
+ID: 23
+l_1_segment_TTD = 3*mic_w
+l_2_segment_TTD = 2.7*mic_w
