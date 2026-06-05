@@ -1,0 +1,46 @@
+cao2022broadband_TTD_Type_2
+parameters vs ID
+
+ID: 1
+l_1_segment_TTD = 1.3*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 2
+l_1_segment_TTD = 1.1*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 3
+l_1_segment_TTD = 1.5*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 4
+l_1_segment_TTD = 1.7*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 5
+l_1_segment_TTD = 1.9*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 6
+l_1_segment_TTD = 2.1*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 8
+l_1_segment_TTD = 2.3*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 9
+l_1_segment_TTD = 2.5*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 10
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 1.1*mic_w
+
+ID: 11
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 1.3*mic_w
+
+ID: 12
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 1.5*mic_w
