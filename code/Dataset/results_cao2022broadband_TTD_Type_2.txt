@@ -1,4 +1,4 @@
-cao2022broadband_TTD_Type_2
+CST_S_Zmax(1)_Zmin(2)_cao2022broadband _ID_1_to_18.txt
 parameters vs ID
 
 ID: 1
@@ -69,10 +69,19 @@ ID: 18
 l_1_segment_TTD = 2.7*mic_w
 l_2_segment_TTD = 2.7*mic_w
 
-ID: 21
-l_1_segment_TTD = 2.9*mic_w
-l_2_segment_TTD = 2.7*mic_w
+__________________________________________________
 
-ID: 23
-l_1_segment_TTD = 3*mic_w
-l_2_segment_TTD = 2.7*mic_w
+CST_S_Zmax(1)_Zmin(2)_cao2022broadband_ID_1_to_18_step2.txt
+
+
+ID: 1
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 2.9*mic_w
+
+
+ID: 2
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 2.9*mic_w
+
+
+
