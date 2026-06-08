@@ -76,12 +76,14 @@ CST_S_Zmax(1)_Zmin(2)_cao2022broadband_ID_1_to_18_step2.txt
 
 ID: 1
 l_1_segment_TTD = 2.9*mic_w
-l_2_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 3.5*mic_w
 
 
-ID: 2
-l_1_segment_TTD = 2.9*mic_w
-l_2_segment_TTD = 2.9*mic_w
+
+
+
 
 
 
