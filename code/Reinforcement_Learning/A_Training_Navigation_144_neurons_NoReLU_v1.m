@@ -23,6 +23,7 @@ statePath = [
     % reluLayer('Name', 'relu1')
     fullyConnectedLayer(144, 'Name', 'fc2')
     % reluLayer('Name', 'relu2')
+    fullyConnectedLayer(144, 'Name', 'fc3')
     fullyConnectedLayer(EnvPars.n_actions, 'Name', 'output')];
 
 criticNet = dlnetwork(layerGraph(statePath));
@@ -65,7 +66,7 @@ fprintf('N_cal=%d  |  MaxEpisodes=%d  |  MaxSteps=%d  |  n_actions=%d\n', ... %[
 trainingStats = train(agent, env, trainOpts); %[output:9eff4c86]
 
 %% ── 9. SAVE ──────────────────────────────────────────────────────────────
-save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_144_neurons_norelu.mat');
+save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_3layer_144neurons_norelu_decay1.mat');
 criticNet = getModel(getCritic(agent));
 save(save_path, 'agent', 'trainingStats', 'criticNet', 'EnvPars');
 fprintf('Agent saved to %s\n', save_path); %[output:9699bef4]
