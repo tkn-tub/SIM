@@ -122,8 +122,33 @@ l_2_segment_TTD = 3.9*mic_w
 l_3_segment_TTD = 2.7*mic_w
 l_4_segment_TTD = 4.9*mic_w
 
-ID: 65
-l_1_segment_TTD = 2.9*mic_w
+ID: 71
+l_1_segment_TTD = 2.7*mic_w
 l_2_segment_TTD = 3.9*mic_w
 l_3_segment_TTD = 2.7*mic_w
-l_4_segment_TTD = 5.1*mic_w
+l_4_segment_TTD = 4.9*mic_w
+
+ID: 73
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.9*mic_w
+l_4_segment_TTD = 4.9*mic_w
+
+ID: 75
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 3.1*mic_w
+l_4_segment_TTD = 4.9*mic_w
+
+ID: 76
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 3.3*mic_w
+l_4_segment_TTD = 4.9*mic_w
+
+ID: 77
+l_1_segment_TTD = 2.7*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 3.6*mic_w
+l_4_segment_TTD = 4.9*mic_w
+
