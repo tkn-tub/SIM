@@ -76,12 +76,54 @@ CST_S_Zmax(1)_Zmin(2)_cao2022broadband_ID_1_to_18_step2.txt
 
 ID: 1
 l_1_segment_TTD = 2.9*mic_w
-l_2_segment_TTD = 2.9*mic_w
-
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 3.5*mic_w
 
 ID: 2
 l_1_segment_TTD = 2.9*mic_w
-l_2_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 3.7*mic_w
 
+ID: 37
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 3.9*mic_w
 
+ID: 38
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 4.1*mic_w
 
+ID: 39
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 4.3*mic_w
+
+ID: 40
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 4.5*mic_w
+
+ID: 41
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 4.7*mic_w
+
+ID: 42
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 4.9*mic_w
+
+ID: 65
+l_1_segment_TTD = 2.9*mic_w
+l_2_segment_TTD = 3.9*mic_w
+l_3_segment_TTD = 2.7*mic_w
+l_4_segment_TTD = 5.1*mic_w

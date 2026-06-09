@@ -19,9 +19,9 @@ env = rlFunctionEnv(ObsInfo, ActInfo, ...
 % Output: n_actions Q-values
 statePath = [
     featureInputLayer(EnvPars.N + 2, 'Name', 'obs')
-    fullyConnectedLayer(81, 'Name', 'fc1')
+    fullyConnectedLayer(144, 'Name', 'fc1')
     % reluLayer('Name', 'relu1')
-    fullyConnectedLayer(81, 'Name', 'fc2')
+    fullyConnectedLayer(144, 'Name', 'fc2')
     % reluLayer('Name', 'relu2')
     fullyConnectedLayer(EnvPars.n_actions, 'Name', 'output')];
 
@@ -65,7 +65,7 @@ fprintf('N_cal=%d  |  MaxEpisodes=%d  |  MaxSteps=%d  |  n_actions=%d\n', ... %[
 trainingStats = train(agent, env, trainOpts); %[output:9eff4c86]
 
 %% ── 9. SAVE ──────────────────────────────────────────────────────────────
-save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_81_neurons_norelu.mat');
+save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_144_neurons_norelu.mat');
 criticNet = getModel(getCritic(agent));
 save(save_path, 'agent', 'trainingStats', 'criticNet', 'EnvPars');
 fprintf('Agent saved to %s\n', save_path); %[output:9699bef4]
