@@ -169,3 +169,9 @@ l_1_segment_TTD = 3.3*mic_w
 l_2_segment_TTD = 3.7*mic_w
 l_3_segment_TTD = 3.9*mic_w
 l_4_segment_TTD = 4.9*mic_w
+
+ID: 81
+l_1_segment_TTD = 3.6*mic_w
+l_2_segment_TTD = 3.7*mic_w
+l_3_segment_TTD = 3.9*mic_w
+l_4_segment_TTD = 4.9*mic_w
