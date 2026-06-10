@@ -9,3 +9,7 @@ l_4_segment_TTD                                   s_center                      
 l_4_segment_TTD                                   s_center+l_3_segment_TTD          (z_L5+z_L6)/2
 0                                                 s_center+l_3_segment_TTD          (z_L5+z_L6)/2
 0                                                 d+slot_w/2+mic_w                  (z_L5+z_L6)/2
+l_6_segment_TTD                                   d+slot_w/2+mic_w                  (z_L5+z_L6)/2
+l_6_segment_TTD                                   d+slot_w/2+mic_w+l_5_segment_TTD  (z_L5+z_L6)/2
+0                                                 d+slot_w/2+mic_w+l_5_segment_TTD  (z_L5+z_L6)/2
+0                                                 d+slot_w/2                        (z_L5+z_L6)/2
