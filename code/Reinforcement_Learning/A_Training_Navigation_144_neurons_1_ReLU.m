@@ -7,7 +7,7 @@ Parameters;   % loads all base variables into workspace and EnvPars %[output:1b3
 Calibration %[output:75e1cdaa]
 
 % In A_Training_Navigation.mlx — after Calibration runs
-EnvPars.MaxEpisodes = EnvPars.N_cal * 200;
+EnvPars.MaxEpisodes = EnvPars.N_cal * 400;
 %%
 %% ── 5. ENVIRONMENT ───────────────────────────────────────────────────────
 env = rlFunctionEnv(ObsInfo, ActInfo, ...
