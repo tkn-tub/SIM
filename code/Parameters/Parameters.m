@@ -8,10 +8,12 @@ total_iteration=1 %[output:1d0373a0]
 %[text] ![SIM_reference_system.png](text:image:813f)
 %[text] Fig. 1: Scenario
 %room dimensions as follows from [10, Table 6.1-1]
-x_max=20;%maximum mobility area in the ground plane
-y_max=20;%maximum mobility area in the ground plane
-z_max=4;%height of the BS in the room as given in [10, Table 6.1-1]
-pos_SIM = [x_max/2 y_max/2 z_max]; % SIM position in meters (x0, y0, z0)
+x_max=10;%maximum mobility area in the ground plane
+y_max=10;%maximum mobility area in the ground plane
+z_max=10;%height of hall the BS in the room as given in 
+h_SIM=4; %height of the SIM
+h_MU=1.5; %height of the MU
+pos_SIM = [x_max/2 y_max/2 h_SIM]; % SIM position in meters (x0, y0, z0)
 pos_MU_init = [2 4 1.5]; % MU position in meters (x0, y0, z0), the height of the MU is given in [10, Table 6.1-1]
 pos_MU_max=[x_max y_max 0];%max position of the MU in the positive ground plane
 d_MU_SIM_max=norm(pos_SIM-pos_MU_init);%maximum distance from the MU to the SIM
@@ -35,16 +37,15 @@ pause_max = 0.1;   % maximum pause duration [s]
 % Create a configuration object for 802.11
 cfgDMG_loc = wlanDMGConfig;
 fc=28*10^9;%transmission frequency
-fc=60*10^9;%transmission frequency
-fc=24*10^9;%transmission frequency
+
 
 lambda=physconst('LightSpeed')/fc;
 % SNR_dB=[2 4 6 8 10];
 idleTime=20e-6;% Idle time between packets [6]
 
 fs = wlanSampleRate(cfgDMG_loc);%sampling time of the receiver node [6]
-BW = 2640*10^6;%bandwidth, see [6]
-% BW = 200*10^6;
+BW = 400*10^6;%bandwidth, see [10, Tab. 6-1]
+
 %Configuring the transmitted waveform for localization applications
 %modulation format [3]
 cfgDMG_loc.MCS="1"; % Single-carrier modulation
@@ -95,10 +96,10 @@ A_atom  = d_x*d_y; % meta-atom area (paper uses A_atom-atom)
 
 %SIM Position
 %defining the hall dimensions in accordance with Table 7.2-4 pp. 21 in [8]
-L_hall= 10; % length of factory hall
-W_hall=5; %width of hall
-H_hall=5; %height (ceiling)
-SIM_Pos = [L_hall/2 W_hall/2 H_hall];       % SIM center on ceiling
+L_hall= x_max; % length of factory hall
+W_hall= y_max; %width of hall
+H_hall=z_max; %height (ceiling)
+SIM_Pos = [L_hall/2 W_hall/2 4];       % SIM center on ceiling
 simSize = 1.0;          % just for plotting SIM frame size (meters)
 % Rx_element='38.901';   % good surrogate fkr directional, patch-like element; Peak gain ≈ 8 dBi; realistic azimuth / elevation beamwidths (not a sphere).
 % Rx_array_normal='z';
@@ -127,10 +128,9 @@ seed=1;
 
 %[text] #### Mobile User parameters
 total_MUpositions=1;
-h_MU=1;
 %MU speed of velocity
 MU_speed=3*1000/60/60;%corresponding to 3km/h meter per second as follows from [10, Tab. 6.1-1]
-Ptx_dBm = 10; % transmit power in dBm
+Ptx_dBm = 23; % transmit power in dBm
 Ptx = db2pow(Ptx_dBm-30);
 Gtx_elem_dBi = 8;                          % desired antenna peak gain
                  % convert to amplitude factor
@@ -209,9 +209,11 @@ cdl.ReceiveArrayOrientation = [cdlInfo.AnglesAoA(1) cdlInfo.AnglesZoA(1)-90 0]';
 % view(0,90)
 %[text] #### Noise parameters; see \[3\]
 % Noise and interference parameters
-noiseFigure = 7;                             % dB
-thermalNoiseDensity = -174;                  % dBm/Hz
+noiseFigure = 7;                             % dB see [10, Tab. 6-1]
+thermalNoiseDensity = -174;                  % dBm/Hz [11, Tab. 5, entry (14)]
+%Interference noise
 rxInterfDensity = -165.7;                    % dBm/Hz
+rxInterfDensity = -Inf;                    % no interference noise
 
 % Calculate the corresponding noise power
 totalNoiseDensity = 10*log10(10^((noiseFigure+thermalNoiseDensity)/10)+10^(rxInterfDensity/10));
@@ -382,6 +384,7 @@ font=20;
 %[text] \[8\] J. Oh, K. Kim, J. Choi, and J. Oh, "Tightly Embedded Modular Antenna-in-Display (MAiD) Into the Panel Edge of Display With Dual-Polarization for 5G Smartphones," IEEE Transactions on Antennas and Propagation, vol. 73, no. 2, pp. 1209–1214, Feb. 2025, doi: 10.1109/TAP.2024.3501415.
 %[text] \[9\] "Study on channel model for frequencies from 0.5 to 100 GHz (Release 16)," 3GPP, TR 38.901 V16.1.0, Nov. 2020.  
 %[text] \[10\] F. Munier, Y. Guo, and R. Da, "Study on NR Positioning Enhancements (Release 17)," 3rd Generation Partnership Project, Sophia Antipolis, France, Technical Report (TR) TR 38.857 V17.0.0, Mar. 2021
+%[text] \[11\] ETSI, “Reconfigurable Intelligent Surfaces (RIS); Communication Models, Channel Models, Channel Estimation and Evaluation Methodology,” European Telecommunications Standards Institute, GR RIS 003 V1.1.1,Jun. 2023 
 
 %[appendix]{"version":"1.0"}
 %---
@@ -416,14 +419,14 @@ font=20;
 %   data: {"dataType":"matrix","outputData":{"columns":20,"name":"zeta","rows":1,"type":"double","value":[["0.9800","0.9810","0.9820","0.9830","0.9840","0.9850","0.9860","0.9870","0.9880","0.9890","0.9900","0.9910","0.9920","0.9930","0.9940","0.9950","0.9960","0.9970","0.9980","0.9990"]]}}
 %---
 %[output:37649b12]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0021"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0038"}}
 %---
 %[output:6a191799]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"9"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
 %---
 %[output:480d9dc6]
 %   data: {"dataType":"textualVariable","outputData":{"name":"T","value":"144"}}
 %---
 %[output:3d71e6f9]
-%   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"11.6443"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
 %---
