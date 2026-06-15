@@ -216,9 +216,14 @@ rxInterfDensity = -165.7;                    % dBm/Hz
 rxInterfDensity = -Inf;                    % no interference noise
 
 % Calculate the corresponding noise power
-totalNoiseDensity = 10*log10(10^((noiseFigure+thermalNoiseDensity)/10)+10^(rxInterfDensity/10));
-var_noise_dB = totalNoiseDensity-30+10*log10(BW); % dB
-var_noise=db2pow(var_noise_dB);
+% Receiver thermal noise density including noise figure
+rxNoiseDensity = thermalNoiseDensity + noiseFigure;   % dBm/Hz
+
+% Sum noise and interference in linear mW/Hz
+totalNoiseDensity_dBmHz = 10*log10(10^(rxNoiseDensity/10) + 10^(rxInterfDensity/10));
+
+% Total noise power over bandwidth BW
+noisePower_dBm = totalNoiseDensity_dBmHz + 10*log10(BW);
 
 %[text] #### SNR evaluation
 %Free path loss in the direct link IRS-MU
