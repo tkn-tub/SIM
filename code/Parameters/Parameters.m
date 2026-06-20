@@ -220,15 +220,15 @@ rxInterfDensity = -Inf;                    % no interference noise
 rxNoiseDensity = thermalNoiseDensity + noiseFigure;   % dBm/Hz
 
 % Sum noise and interference in linear mW/Hz
-totalNoiseDensity_dBmHz = 10*log10(10^(rxNoiseDensity/10) + 10^(rxInterfDensity/10));
+totalNoiseDensity_dBHz = 10*log10(10^((rxNoiseDensity-30)/10) + 10^((rxInterfDensity-30)/10));
 
 % Total noise power over bandwidth BW
-noisePower_dBm = totalNoiseDensity_dBmHz + 10*log10(BW);
+noisePower_dB = totalNoiseDensity_dBHz + 10*log10(BW);
 
 %[text] #### SNR evaluation
 %Free path loss in the direct link IRS-MU
 Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
-SNR_dB=Ptx_dBm-30+pow2db(Lr)-var_noise_dB %[output:3d71e6f9]
+SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:3d71e6f9]
 
 %[text] #### Agent parameters
 %Environment related parameters
@@ -249,7 +249,7 @@ EnvPars.Gtx_dBi = evalin('base','Gtx_dBi');
 EnvPars.Grx_dBi = evalin('base','Grx_dBi');
 EnvPars.txArray.NumElements = evalin('base','txArray.NumElements');
 EnvPars.cdl = evalin('base','cdl');
-EnvPars.var_noise_dB = evalin('base','var_noise_dB');
+EnvPars.var_noise_dB = evalin('base','noisePower_dB');
 EnvPars.r = 0;
 
 EnvPars.d_x = evalin('base','d_x');
