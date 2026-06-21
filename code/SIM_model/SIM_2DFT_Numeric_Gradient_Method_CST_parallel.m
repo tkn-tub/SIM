@@ -203,141 +203,150 @@ eta = eta0;  %initial learning rate
 beta = 1+0j; %initial scaling factor
 
 
-%beta_hist = zeros(maxIter,1);
+% Save the same initial condition for every zeta value.
+% This is required to make the zeta sweep independent and therefore safe for parfor.
+xi0 = xi;
+Upsilon0 = Upsilon;
+
+numZeta = numel(zeta)-10;
 
 % ----------- Numeric gradient settings ------------------------------------
 h = 1e-5; % finite difference step in radians (try 1e-4..1e-6)
 
-G_vs_eta=cell(length(eta),1);%save the approximations given by G versus the parameter zeta
-loss_hist = cell(length(eta),1);%save the evaluation of the loss function
+% Preallocate sliced outputs for parfor.
+G_vs_eta = cell(numZeta,1);      % approximation G for each zeta
+loss_hist = cell(numZeta,1);     % loss history for each zeta
+beta_hist = cell(numZeta,1);     % beta history for each zeta
 
-xi0 = xi;
-Upsilon0 = Upsilon;
+% Start a parallel pool if none exists. Requires Parallel Computing Toolbox.
+if isempty(gcp('nocreate'))
+    parpool;
+end
 
-numZeta = numel(zeta);
+parfor i_zeta = 1:numZeta
+    %100*i_zeta/numZeta
+    
 
-G_vs_eta = zeros(1,length(zeta));
-loss_hist = zeros(length(zeta),maxIter);
-beta_hist = zeros(length(zeta),maxIter);
+    % Local copies: every worker must own its xi/Upsilon because they are
+    % updated during training. This avoids cross-iteration dependencies.
+    xi_local = xi0;
+    Upsilon_local = Upsilon0;
 
-maxIter %[output:8aef133b]
+    eta_local = eta0;  % initial learning rate
+    beta_local = 1+0j; % initial scaling factor
 
-for i_zeta=1:length(zeta)-10 %[output:group:57b9bac6]
-    disp(i_zeta/length(zeta)*100) %[output:225d3e42]
-
-    eta = eta0;  %initial learning rate
-    beta = 1+0j; %initial scaling factor
-
+    loss_i = zeros(maxIter,1);
+    beta_i = complex(zeros(maxIter,1));
+    G_i = complex(zeros(size(F)));
 
     for it = 1:maxIter
-        it/maxIter*100
-        % ----- Compute G = WL*Upsilon_L*W_{L-1}*...*Upsilon_1*W0  [Eq. (2)] ----- 
-        G_intermediate = eye(M,M);%initializing the intermidieate variable
-        %Computing first the intermediate terms Upsilon_l*W_{l-1}
-        for l=2:(L)
-            G_intermediate=Upsilon{l}*W{l-1}*G_intermediate;
+        fprintf('iter: %.1f, zeta %d/%d, %.1f %%n', 100*it/maxIter, i_zeta, numZeta, 100*i_zeta/numZeta);
+        
+        % fprintf('Iteration %.1f %%n', 100*it/maxIter);
+
+        % ----- Compute G = WL*Upsilon_L*W_{L-1}*...*Upsilon_1*W0  [Eq. (2)] -----
+        G_intermediate = eye(M,M); % initializing the intermediate variable
+
+        % Computing first the intermediate terms Upsilon_l*W_{l-1}
+        for l = 2:L
+            G_intermediate = Upsilon_local{l}*W{l-1}*G_intermediate;
         end
-    
-        %Including the remaining terms
-        G=WL*G_intermediate*Upsilon{1}*W0;
-    
+
+        % Including the remaining terms
+        G_i = WL*G_intermediate*Upsilon_local{1}*W0;
+
         % ----- Update beta by LS -----
-        g = G(:);
+        g = G_i(:);
         f = F(:);
-        beta = (g' * g) \ (g' * f);%as follows from [Eq. (24), 1]
-        %beta = inv(g' * g) * (g' * f);%as follows from [Eq. (24), 1]
-    
+        beta_local = (g' * g) \ (g' * f); % scalar LS, faster/stabler than inv(...)*...
+
         % ----- Loss -----
-        E = beta*G - F;
+        E = beta_local*G_i - F;
         Lval = norm(E,'fro')^2;
-        loss_hist(i_zeta,it) = Lval;
-        beta_hist(i_zeta,it) = beta;
-    
-        % % stopping criteria
-        % if it > 1 && abs(loss_hist{i_zeta}(it)-loss_hist{i_zeta}(it-1))/max(1,loss_hist{i_zeta}(it-1)) < tol
-        %     loss_hist{i_zeta} = loss_hist{i_zeta}(1:it);
-        %     beta_hist = beta_hist(1:it);
+        loss_i(it) = Lval;
+        beta_i(it) = beta_local;
+
+        % Optional stopping criteria. Keep disabled to preserve your current behavior.
+        % if it > 1 && abs(loss_i(it)-loss_i(it-1))/max(1,loss_i(it-1)) < tol
+        %     loss_i = loss_i(1:it);
+        %     beta_i = beta_i(1:it);
         %     break;
         % end
-    
-        
-        % ===== Numerical gradient evaluation avoiding to compute Eq. (15) ===
-        % grads{l}(m) ≈ (L(xi+ h e_{l,m}) - L(xi)) / (h)
-        % ============================================================
+
+        % ===== Numerical gradient evaluation avoiding Eq. (15) =====
+        % grads{l}(m) approx (L(xi + h e_{l,m}) - L(xi))/h
         grads = cell(L,1);
         for l = 1:L
             grads{l} = zeros(M,1);
         end
-    
+
         for l = 1:L
-            % disp(l/L*100) %[output:4a03531a]
+            
             for m = 1:M
-    
-                %Evaluating the gradient per layer and atom
-                % --- xi plus ---
-                xi_p = xi{l}(m)+h;
+                % Evaluating the gradient per layer and atom
+                xi_p = xi_local{l}(m) + h;
                 amp_p = F_amp(mod(xi_p, 2*pi));
-                Upsilon_p=Upsilon;
-                Upsilon_p{l}(m,m)=amp_p*exp(1i*xi_p);
-    
-                % ----- Compute G = WL*Upsilon_L*W_{L-1}*...*Upsilon_1*W0  [Eq. (2)] ----- 
-                G_intermediate = eye(M,M);%initializing the intermidieate variable
-                %Computing first the intermediate terms Upsilon_l*W_{l-1}
-                for l_int=2:L
-                    G_intermediate=Upsilon_p{l_int}*W{l_int-1}*G_intermediate;
+
+                Upsilon_p = Upsilon_local;
+                Upsilon_p{l}(m,m) = amp_p*exp(1i*xi_p);
+
+                % Recompute G for the perturbed phase
+                G_intermediate = eye(M,M);
+                for l_int = 2:L
+                    G_intermediate = Upsilon_p{l_int}*W{l_int-1}*G_intermediate;
                 end
-    
-                %Including the remaining terms
-                G_p=WL*G_intermediate*Upsilon_p{1}*W0;
-                g_p=G_p(:);
-                beta_p=(g_p' * g_p) \ (g_p' * f);%as follows from [Eq. (24), 1]
-    
+
+                G_p = WL*G_intermediate*Upsilon_p{1}*W0;
+                g_p = G_p(:);
+                beta_p = (g_p' * g_p) \ (g_p' * f);
+
                 E_p = beta_p*G_p - F;
-                L_p = norm(E_p,'fro')^2;           
-    
-                % --- central difference ---
-                grads{l}(m) = (L_p - Lval) / (h);
-    
+                L_p = norm(E_p,'fro')^2;
+
+                % Forward finite difference, as in your original code.
+                grads{l}(m) = (L_p - Lval) / h;
             end
         end
-    
+
         % ----- Update phases xi_l <- xi_l - eta * grad -----
-        
-    
         for l = 1:L
-            for m=1:M
-                xi{l}(m) = xi{l}(m) - eta * grads{l}(m);            
-            end
-            xi{l} = mod(xi{l}, 2*pi);
+            xi_local{l} = mod(xi_local{l} - eta_local*grads{l}, 2*pi);
         end
-    
-        %Updating the new transmission matrix
+
+        % Updating the new transmission matrix
         for l = 1:L
-            amp_l = F_amp(mod(xi{l}, 2*pi));
-            Upsilon{l}=diag(amp_l .*exp(1i*xi{l}));
+            amp_l = F_amp(mod(xi_local{l}, 2*pi));
+            Upsilon_local{l} = diag(amp_l .* exp(1i*xi_local{l}));
         end
-    
-        % learning-rate schedule
-        eta = eta*zeta(i_zeta); %as follows from [Eq. (20), 1]
-        % % optional: keep your adaptive eta schedule, but usually start with fixed eta first
-        % maxGrad = 0;
-        % for l = 1:L
-        %     maxGrad = max(maxGrad, max(abs(grads{l})));
-        % end
-        % eta = eta * zeta * pi / max(1e-12, maxGrad); % as follows from Eq. (12): eta <- eta * zeta * pi / max_l, following [Eq. (20), 2]
-        
-    
-        % fprintf('it=%d, loss=%.3e, |beta|=%.3f, eta=%.3e\n', it, Lval, abs(beta), eta);
+
+        % Learning-rate schedule
+        eta_local = eta_local*zeta(i_zeta); % as follows from [Eq. (20), 1]
     end
 
-    G_vs_eta(i_zeta)=G;
-
-end %[output:group:57b9bac6]
+    G_vs_eta{i_zeta} = G_i;
+    loss_hist{i_zeta} = loss_i;
+    beta_hist{i_zeta} = beta_i;
+end
+%%
+% figure;
+% % semilogy(loss_hist{1},'LineWidth',2); grid on; hold on;
+% semilogy(loss_hist{2},'LineWidth',2); grid on; hold on;
+% % semilogy(loss_hist{3},'LineWidth',2);
+% semilogy(loss_hist{4},'LineWidth',2);
+% % semilogy(loss_hist{5},'LineWidth',2);
+% semilogy(loss_hist{6},'LineWidth',2);
+% % semilogy(loss_hist{7},'LineWidth',2);
+% semilogy(loss_hist{8},'LineWidth',2);
+% % semilogy(loss_hist{9},'LineWidth',2);
+% xlabel('Iterations','Interpreter','latex');
+% ylabel('$\mathcal{L}=||\beta G-F||^2$','Interpreter','latex');
+% legend({'$\zeta=0.2$','$\zeta=0.4$','$\zeta=0.6$','$\zeta=0.8$'},'Interpreter','latex')
+% set(gca,'FontSize',font);
 %%
 %saving on the current folder
 % save G_vs_eta_N_4 G_vs_eta M_x M_y N_x N_y L M N loss_hist beta_hist
 % save G_vs_eta_N_16_Zeta_0_8_to_1 G_vs_eta M_x M_y N_x N_y L M N loss_hist beta_hist zeta
-%save G_vs_eta_N_16_Zeta_0_98_to_0_99_CST G_vs_eta M_x M_y N_x N_y L M N loss_hist beta_hist zeta
+% save G_vs_eta_N_16_Zeta_0_98_to_0_99_CST G_vs_eta M_x M_y N_x N_y L M N loss_hist beta_hist zeta
 %saving on the Dataset folder
 path = fullfile('..', 'Dataset', 'G_vs_eta_N_16_Zeta_0_98_to_0_99_CST.mat');
 save(path, 'G_vs_eta','M_x','M_y', 'N_x', 'N_y', 'L', 'M', 'N', 'loss_hist', 'beta_hist', 'zeta');
@@ -617,7 +626,7 @@ end
 %   data: {"dataType":"text","outputData":{"text":"Wireless packet type: SC\n","truncated":false}}
 %---
 %[output:1c38dc4a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"16"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N_y","value":"4"}}
 %---
 %[output:6b8cd335]
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
@@ -639,13 +648,4 @@ end
 %---
 %[output:23397e9b]
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
-%---
-%[output:8aef133b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"maxIter","value":"40"}}
-%---
-%[output:225d3e42]
-%   data: {"dataType":"text","outputData":{"text":"     5\n\n","truncated":false}}
-%---
-%[output:4a03531a]
-%   data: {"dataType":"text","outputData":{"text":"    7.6923\n\n   15.3846\n\n   23.0769\n\n   30.7692\n\n   38.4615\n\n   46.1538\n\n   53.8462\n\n   61.5385\n\n   69.2308\n\n   76.9231\n\n   84.6154\n\n   92.3077\n\n   100\n\n    7.6923\n\n   15.3846\n\n   23.0769\n\n   30.7692\n\n   38.4615\n\n   46.1538\n\n   53.8462\n\n   61.5385\n\n   69.2308\n\n   76.9231\n\n   84.6154\n\n   92.3077\n\n   100\n\n","truncated":false}}
 %---
