@@ -65,8 +65,8 @@ kappa=waveform_k;
 N_x=[2 3 4 5 6 7 8 9 10 11 12 13 14 15];%[4 5 6 7 8 9];%SIM dimension of the zero Layer
 N_x=4; %as follows from [1, Sec. IV A] for the (4x4 grid)
 % N_x=2 %as follows from [1, Sec. IV A] for the (2x2 grid)
-N_y=N_x %to account for a balanced error in the x an y axes %[output:4cd315df]
-N=N_x.*N_y;
+N_y=N_x; %to account for a balanced error in the x an y axes
+N=N_x.*N_y %[output:4cd315df]
 
 %number of meta-atoms in the intermediate layers
 M=225;%as follows from [1, Sec. IV A] for the (4x4 grid)
@@ -116,11 +116,14 @@ Grx_dBi = 8;                          % desired antenna peak gain
 Grx = 10^(Grx_dBi/20);                  % convert to amplitude factor
 
 %[text] #### Gradient Descent Algorithm 
-maxIter = 400; %number of gradient descent iterations
+maxIter = 500; %number of gradient descent iterations
 eta0 = 1; % initial learning rate, as follows from the value in first paragraph, Section VI.B
-zeta_ini=0.98;
+% zeta_ini=0.98;
+% zeta_delta=0.001;
+% zeta_end=1-zeta_delta;
+zeta_ini=0.985;
 zeta_delta=0.001;
-zeta_end=1-zeta_delta;
+zeta_end=0.99;
 % zeta = 0.1:0.1:(1-0.1); %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration
 zeta = zeta_ini:zeta_delta:zeta_end %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration %[output:9d9de7a9]
 tol = 1e-8; %tolerance of the approximation
@@ -216,14 +219,19 @@ rxInterfDensity = -165.7;                    % dBm/Hz
 rxInterfDensity = -Inf;                    % no interference noise
 
 % Calculate the corresponding noise power
-totalNoiseDensity = 10*log10(10^((noiseFigure+thermalNoiseDensity)/10)+10^(rxInterfDensity/10));
-var_noise_dB = totalNoiseDensity-30+10*log10(BW); % dB
-var_noise=db2pow(var_noise_dB);
+% Receiver thermal noise density including noise figure
+rxNoiseDensity = thermalNoiseDensity + noiseFigure;   % dBm/Hz
+
+% Sum noise and interference in linear mW/Hz
+totalNoiseDensity_dBHz = 10*log10(10^((rxNoiseDensity-30)/10) + 10^((rxInterfDensity-30)/10));
+
+% Total noise power over bandwidth BW
+noisePower_dB = totalNoiseDensity_dBHz + 10*log10(BW);
 
 %[text] #### SNR evaluation
 %Free path loss in the direct link IRS-MU
 Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
-SNR_dB=Ptx_dBm-30+pow2db(Lr)-var_noise_dB %[output:3d71e6f9]
+SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:3d71e6f9]
 
 %[text] #### Agent parameters
 %Environment related parameters
@@ -244,7 +252,7 @@ EnvPars.Gtx_dBi = evalin('base','Gtx_dBi');
 EnvPars.Grx_dBi = evalin('base','Grx_dBi');
 EnvPars.txArray.NumElements = evalin('base','txArray.NumElements');
 EnvPars.cdl = evalin('base','cdl');
-EnvPars.var_noise_dB = evalin('base','var_noise_dB');
+EnvPars.var_noise_dB = evalin('base','noisePower_dB');
 EnvPars.r = 0;
 
 EnvPars.d_x = evalin('base','d_x');
@@ -407,7 +415,7 @@ font=20;
 %   data: {"dataType":"text","outputData":{"text":"Wireless packet type: SC\n","truncated":false}}
 %---
 %[output:4cd315df]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N_y","value":"4"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"16"}}
 %---
 %[output:18b88e21]
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
@@ -416,7 +424,7 @@ font=20;
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_y","value":"15"}}
 %---
 %[output:9d9de7a9]
-%   data: {"dataType":"matrix","outputData":{"columns":20,"name":"zeta","rows":1,"type":"double","value":[["0.9800","0.9810","0.9820","0.9830","0.9840","0.9850","0.9860","0.9870","0.9880","0.9890","0.9900","0.9910","0.9920","0.9930","0.9940","0.9950","0.9960","0.9970","0.9980","0.9990"]]}}
+%   data: {"dataType":"matrix","outputData":{"columns":6,"name":"zeta","rows":1,"type":"double","value":[["0.9850","0.9860","0.9870","0.9880","0.9890","0.9900"]]}}
 %---
 %[output:37649b12]
 %   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0038"}}
