@@ -203,16 +203,16 @@ fprintf('Adjust maxIter now if that estimate doesn''t fit your time budget.\n\n'
 %% ----------------- Training loop -----------------
 beta = 1+0j;
 
-fig = figure;
-h_plot = semilogy(nan, nan, 'b-', 'LineWidth', 1.5);
-grid on; xlim([1 maxIter]);
-xlabel('Iterations', 'Interpreter','latex');
-ylabel('$\mathcal{L}=\|\beta G-F\|^2$', 'Interpreter','latex');
-title(sprintf('Training (CST), $\\zeta$=%.3f, $f_c$=%.0f GHz (live)', zeta_fixed, fc/1e9), 'Interpreter','latex');
-set(gca, 'FontSize', font);
-if start_it > 1
-    set(h_plot, 'XData', 1:(start_it-1), 'YData', loss_hist(1:(start_it-1)));
-end
+% fig = figure;
+% h_plot = semilogy(nan, nan, 'b-', 'LineWidth', 1.5);
+% grid on; xlim([1 maxIter]);
+% xlabel('Iterations', 'Interpreter','latex');
+% ylabel('$\mathcal{L}=\|\beta G-F\|^2$', 'Interpreter','latex');
+% title(sprintf('Training (CST), $\\zeta$=%.3f, $f_c$=%.0f GHz (live)', zeta_fixed, fc/1e9), 'Interpreter','latex');
+% set(gca, 'FontSize', font);
+% if start_it > 1
+%     set(h_plot, 'XData', 1:(start_it-1), 'YData', loss_hist(1:(start_it-1)));
+% end
 
 t_start = tic;
 for it = start_it:maxIter

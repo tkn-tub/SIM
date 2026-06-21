@@ -41,8 +41,17 @@ at_peak = (t_x_new == EnvPars.best_tx_cal(LoggedSignals.pos_idx)) && ...
           (t_y_new == EnvPars.best_ty_cal(LoggedSignals.pos_idx));
 IsDone  = at_peak || (LoggedSignals.stepCount >= EnvPars.MaxStepsPerEpisode);
 
-%% Next observation
-observation = [power_vec; t_x_new; t_y_new];
+%% Next observation -- coherent field, [Re(r); Im(r)] stacked (2N real
+% values encoding SIM1's true complex output). Phase is preserved through
+% to SIM2 now, not discarded here -- detection happens once, at the
+% diode readout at the far end of the network. CONVENTION: first N rows
+% are Re(r), next N rows are Im(r) -- must match
+% realImagToComplexLayer.m's predict() exactly.
+%
+% t_x_new/t_y_new remain available via LoggedSignals (in-silico tracking,
+% used above for reward/termination and below for DOA logging) but are
+% not part of the observation vector.
+observation = [real(r); imag(r)];
 
 %% Log DOA estimate at current position
 R_2D = reshape(abs(r), [EnvPars.N_x, EnvPars.N_y]);

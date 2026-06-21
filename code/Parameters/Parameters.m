@@ -371,6 +371,17 @@ EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
     -2*pi*(EnvPars.n_x(n_)-1) .* (EnvPars.t_x(t_n_)-1) / (EnvPars.N_x*EnvPars.T_x) ...
     -2*pi*(EnvPars.n_y(n_)-1) .* (EnvPars.t_y(t_n_)-1) / (EnvPars.N_y*EnvPars.T_y) ));
 
+% ---- CST amplitude interpolant for the input layer (layer 0 / v0) ----
+% Built the same way as in SIM_Training_CST_SingleZeta_Parallel.m
+% (pchip + 'nearest' flat extrapolation, NOT periodic).
+load t_y_x.mat
+[EnvPars.F_amp, EnvPars.phase_min_meas, EnvPars.phase_max_meas] = ...
+    build_amplitude_interpolant(t_y_x_amp_dB, t_y_x_phase_deg);
+
+% CST-coupled input layer, SEPARATE from the analytic EnvPars.U_func above
+% so existing code keeps using U_func untouched. SIM-2 uses U_func_CST.
+EnvPars.U_func_CST = @(n_, t_n_) U_func_cst(n_, t_n_, EnvPars);
+
 EnvPars.episode_counter = EpisodeCounter();
 
 %Analytic FFT
@@ -379,8 +390,55 @@ G_func = @(n,n_psi) exp(-1i*2*pi*(n_psi_x(n_psi)-1)/EnvPars.N_x.*(n_x(n)-1)).* .
     exp(-1i*2*pi*(n_psi_y(n_psi)-1)/EnvPars.N_y.*(n_y(n)-1));
 [n_psi_grid, n_s_grid] = ndgrid(1:EnvPars.N, 1:EnvPars.N);
 EnvPars.G = G_func(n_s_grid, n_psi_grid);
+
+% ---- Trained CST-realistic SIM-1 G (separate from analytic EnvPars.G) ----
+
+sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_28_GHz.mat');
+S_sim1 = load(sim1_file, 'G', 'beta');
+assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ...
+    'Loaded G is %dx%d but expected %dx%d.', ...
+    size(S_sim1.G,1), size(S_sim1.G,2), EnvPars.N, EnvPars.N);
+EnvPars.G_CST = S_sim1.beta * S_sim1.G;
+dft_residual = norm(EnvPars.G_CST - EnvPars.G, 'fro') / norm(EnvPars.G, 'fro');
+fprintf('Loaded CST SIM-1 G_CST. Deviation from analytic G: %.3f%%\n', 100*dft_residual); %[output:949c03d3]
 %[text] #### Plotting parameters
 font=20;
+
+%%
+%[text] ## Helper functions
+function v = U_func_cst(n_, t_n_, EnvPars)
+    phase = -2*pi*(EnvPars.n_x(n_)-1) .* (EnvPars.t_x(t_n_)-1) / (EnvPars.N_x*EnvPars.T_x) ...
+            -2*pi*(EnvPars.n_y(n_)-1) .* (EnvPars.t_y(t_n_)-1) / (EnvPars.N_y*EnvPars.T_y);
+    amp = EnvPars.F_amp(mod(phase, 2*pi));
+    v = amp .* exp(1i*phase);
+end
+
+function [F_amp, phase_min, phase_max] = build_amplitude_interpolant(mag_dB, phase_deg)
+% Builds a phase -> amplitude lookup from the CST sweep.
+% Outside the measured arc [phase_min, phase_max], holds the boundary
+% value constant (flat) rather than wrapping/blending across the gap --
+% periodic wrap-around produced unphysical >0 dB (gain) in the unmeasured
+% region, so flat-hold is the physically defensible choice here.
+
+    phase_rad = deg2rad(phase_deg(:));
+    phase_unwrapped = unwrap(phase_rad);
+    mag_lin = 10.^(mag_dB(:)/20);
+
+    [phase_sorted, idx] = sort(phase_unwrapped);
+    mag_sorted = mag_lin(idx);
+
+    % Bring into [0,2*pi) to match how xi is queried elsewhere in the code.
+    % Safe as a uniform shift as long as the whole sweep sits within one
+    % 360-degree window (true here), so monotonicity is preserved.
+    phase_wrapped = mod(phase_sorted, 2*pi);
+    [phase_wrapped, idx2] = sort(phase_wrapped);
+    mag_sorted = mag_sorted(idx2);
+
+    phase_min = phase_wrapped(1);
+    phase_max = phase_wrapped(end);
+
+    F_amp = griddedInterpolant(phase_wrapped, mag_sorted, 'pchip', 'nearest');
+end
 %[text] ## References
 %[text] \[1\] J. An et al., "Two-Dimensional Direction-of-Arrival Estimation Using Stacked Intelligent Metasurfaces," in IEEE Journal on Selected Areas in Communications, vol. 42, no. 10, pp. 2786-2802, Oct. 2024. DOI [10.1109/JSAC.2024.3414613](https://doi.org/10.1109/JSAC.2024.3414613)
 %[text] \[2\] J. An *et al*., "Stacked Intelligent Metasurface Performs a 2D DFT in the Wave Domain for DOA Estimation," *ICC 2024 - IEEE International Conference on Communications*, Denver, CO, USA, 2024, pp. 3445-3451, doi: [10.1109/ICC51166.2024.10622963](https://ieeexplore.ieee.org/document/10622963)
@@ -437,4 +495,7 @@ font=20;
 %---
 %[output:3d71e6f9]
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
+%---
+%[output:949c03d3]
+%   data: {"dataType":"text","outputData":{"text":"Loaded CST SIM-1 G_CST. Deviation from analytic G: 1.806%\n","truncated":false}}
 %---

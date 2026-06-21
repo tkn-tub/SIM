@@ -1,35 +1,177 @@
-%% Training script — SIM Navigation with DQN
-% Requires Parameters.mlx to have been run first
+%% Training script — SIM Navigation with DQN, SIM2 Q-network variant
+% Requires Parameters.m to have been run first (this script calls it)
+%
+% Built incrementally with Claude -- all four parts done, gradient-
+% verified per-layer (see SIM2_GradientCheck_*.m, run separately):
+%   Part 1 [DONE] -- SIM2 geometry & propagation matrices (W0_SIM2, W_M9)
+%   Part 2 [DONE] -- custom layers: simPhaseLayerCST (N), simPhaseLayerCST (M)
+%   Part 3 [DONE] -- realToComplexLayer, diodeReadoutLayer, dlnetwork assembly
+%   Part 4 [DONE] -- ObsInfo override (2N-dim, local to this script),
+%                     stepFunction_nav_CST.m / resetFunction_nav.m updated
+%                     to emit [Re(r);Im(r)] (t_x,t_y tracked in silico,
+%                     not observed)
+%
+% REVISED again after a real platform limitation: MATLAB custom layers
+% cannot return complex values from predict()/forward() (confirmed via
+% MathWorks doc, not just inferred from the error). Every layer
+% (simPhaseLayerCST, simPropagationLayer, diodeReadoutLayer) now operates
+% on REAL-STACKED [Re;Im] representations throughout -- see each layer
+% file for the re-derived math. to_complex is GONE entirely: with
+% everything real-stacked end to end, the observation [Re(r);Im(r)] feeds
+% sim2_layer1 directly. realImagToComplexLayer.m and realToComplexLayer.m
+% are both now historical/unused. Gradient checks were REDONE (not just
+% re-run) against the new math -- see SIM2_GradientCheck_PhaseLayer.m,
+% SIM2_GradientCheck_PropagationLayer.m, SIM2_GradientCheck_DiodeReadout.m.
+%
+% NOT yet done, separate from this architecture: EnvPars.U_func (v0) and
+% G still use the idealized analytic models -- the CST amplitude-phase
+% coupling on the SIM1 input layer, and loading the actual trained
+% (CST-aware) G from SIM_Training_CST_SingleZeta_Parallel.m instead of
+% the closed-form DFT kernel, are both still open from earlier in this
+% project and independent of the SIM2 work above.
+%
+% STILL NEEDED before trusting a real training run:
+%   - End-to-end check: does criticNet/predict() actually run on a real
+%     observation without shape/format errors? (per-layer checks passed,
+%     but the full chain hasn't been exercised together yet)
+%   - Capacity sanity check: 241 trainable phases vs. the old FC
+%     network's ~20k+ weights -- worth comparing against the original
+%     training curve (Fig. 6) once this trains, not just checking that
+%     it learns at all
+
 clc; clear all; close all;
-addingPathParentFolderByName('code'); %[output:084ff5bb]
-Parameters;   % loads all base variables into workspace and EnvPars %[output:1b3a6c37] %[output:7e2be390] %[output:94b50f6a] %[output:54970599] %[output:060c976e] %[output:24212b63] %[output:516e2386] %[output:77aaf974] %[output:4d6c3649] %[output:00757844]
+addingPathParentFolderByName('code');
+Parameters;   % loads all base variables into workspace and EnvPars
 
-Calibration %[output:75e1cdaa]
+%Update the G matrix to use the one computed with CST
+EnvPars.G = EnvPars.G_CST;   % SIM-2 uses the CST-realistic SIM-1 front-end
+EnvPars.U_func = EnvPars.U_func_CST;
 
-% In A_Training_Navigation.mlx — after Calibration runs
+
+Calibration
+
+% In A_Training_Navigation — after Calibration runs
 EnvPars.MaxEpisodes = EnvPars.N_cal * 400;
-Neurons_per_layer=25*25;
-%%
-%% ── 5. ENVIRONMENT ───────────────────────────────────────────────────────
-env = rlFunctionEnv(ObsInfo, ActInfo, ...
-      @(a,ls) stepFunction_nav_CST(a, ls, EnvPars), ...
-      @()     resetFunction_nav(EnvPars));
 
-%% ── 6. Q-NETWORK ─────────────────────────────────────────────────────────
-% Input: N+2 dimensional observation
-% Output: n_actions Q-values
+%% ── PART 4: ObsInfo OVERRIDE ────────────────────────────────────────────
+% SIM2 observes only the N-dim field amplitude |r| -- never t_x/t_y.
+% Parameters.m's own ObsInfo (N+2, used by the original FC script) is
+% deliberately left untouched -- overriding it in place would silently
+% break A_Training_Navigation_225_neurons_1_ReLU_CST.m. This local
+% override shadows it for the rest of THIS script only.
+%
+% Must match what stepFunction_nav_CST.m / resetFunction_nav.m now
+% actually return (observation = [real(r); imag(r)], 2N-dimensional,
+% CONVENTION: first N rows real, next N rows imaginary).
+ObsInfo             = rlNumericSpec([2*EnvPars.N, 1]);
+ObsInfo.Name        = 'observations';
+ObsInfo.Description = 'Coherent field [Re(r);Im(r)] (SIM1 output, phase preserved) -- t_x,t_y tracked in silico only, not observed';
+ObsInfo.LowerLimit  = -inf(2*EnvPars.N, 1);   % real/imag parts can be negative -- not an amplitude anymore
+ObsInfo.UpperLimit  =  inf(2*EnvPars.N, 1);
+
+%% ── PART 1: SIM2 GEOMETRY & PROPAGATION MATRICES ──────────────────────────
+% Computed fresh every run (not loaded from a saved .mat) so it always
+% matches whatever is currently in Parameters.m -- avoids training against
+% stale geometry if N_x/M_x/s_x/s_layer/etc. get tuned later and this
+% block isn't rerun.
+%
+%   W0_SIM2 : N=16  -> M=225   (SIM2 layer 1 -> layer 2)
+%   W_M9    : M=225 -> 9       (SIM2 layer 2 -> layer 3, passive 3x3 funnel)
+%
+% Same Sommerfeld kernel as SIM1's W0/W{l} in
+% SIM_Training_CST_SingleZeta_Parallel.m, evaluated on different facing
+% grids -- no new physics introduced, per our discussion.
+
+% N-grid: SIM1's existing output plane = SIM2's input plane (same coords)
+[xn, yn] = grid_coords_centered(N_x, N_y, d_x, d_y);
+
+% M-grid: SIM2 layer 2 (15x15), same spacing as SIM1's intermediate layers
+[xm, ym] = grid_coords_centered(M_x, M_y, s_x, s_y);
+
+% 3x3 output grid: SIM2 layer 3 -- 9 ports, one per navigation action
+Q_x = 3;
+Q_y = 3;
+[xq, yq] = grid_coords_centered(Q_x, Q_y, s_x, s_y);
+
+M = M_x * M_y;
+W0_SIM2 = zeros(M, N);
+for m = 1:M
+    for n = 1:N
+        d = sqrt((xm(m)-xn(n))^2 + (ym(m)-yn(n))^2 + s_layer^2);
+        cos_epsilon = s_layer/d;
+        W0_SIM2(m,n) = (A_atom*cos_epsilon)/(2*pi*d^2) * (1-1j*kappa*d) * exp(1j*kappa*d);
+    end
+end
+
+Q = Q_x * Q_y;   % = 9, must equal EnvPars.n_actions
+W_M9 = zeros(Q, M);
+for q = 1:Q
+    for m = 1:M
+        d = sqrt((xq(q)-xm(m))^2 + (yq(q)-ym(m))^2 + s_layer^2);
+        cos_epsilon = s_layer/d;
+        W_M9(q,m) = (A_atom*cos_epsilon)/(2*pi*d^2) * (1-1j*kappa*d) * exp(1j*kappa*d);
+    end
+end
+
+assert(Q == EnvPars.n_actions, ...
+    'Output port count (%d) does not match EnvPars.n_actions (%d) -- check the 3x3 grid against the actual action count before proceeding.', ...
+    Q, EnvPars.n_actions);
+
+fprintf('SIM2 geometry: W0_SIM2 %dx%d (N=%d->M=%d), W_M9 %dx%d (M=%d->%d ports)\n', ...
+    size(W0_SIM2,1), size(W0_SIM2,2), N, M, size(W_M9,1), size(W_M9,2), M, Q);
+fprintf('max(abs(W0_SIM2))=%.3e , max(abs(W_M9))=%.3e\n', max(abs(W0_SIM2(:))), max(abs(W_M9(:))));
+
+%% ── PART 2: SIM2 CUSTOM LAYERS ──────────────────────────────────────────────
+% Custom layers live in simPhaseLayerCST.m and simPropagationLayer.m
+% (separate files -- MATLAB requires one classdef per file). Place both
+% in your 'code' folder so addingPathParentFolderByName('code') finds them.
+%
+% IMPORTANT: run SIM2_GradientCheck_PhaseLayer.m once, separately, before
+% trusting this in actual training -- it verifies simPhaseLayerCST's
+% custom backward() against a brute-force finite difference on the loss.
+
+% ----- CST amplitude-phase coupling (same source as SIM1's training) -----
+load t_y_x.mat
+[F_amp, phase_min_meas, phase_max_meas] = build_amplitude_interpolant(t_y_x_amp_dB, t_y_x_phase_deg);
+
+% ----- SIM2 layers -----
+sim2_layer1 = simPhaseLayerCST(N, F_amp, 'sim2_N');   % N=16,  learnable, CST-coupled
+prop_N_to_M = simPropagationLayer(W0_SIM2, 'prop_N_to_M');
+sim2_layer2 = simPhaseLayerCST(M, F_amp, 'sim2_M');   % M=225, learnable, CST-coupled
+prop_M_to_Q = simPropagationLayer(W_M9, 'prop_M_to_Q');
+
+% Layer 3 (the 9-port output) is confirmed to be the identity: Theta3=0,
+% no F_amp lookup, so diag(exp(i*0)) = I. It contributes nothing beyond
+% what prop_M_to_Q (W_M9, which already carries the Sommerfeld
+% attenuation) does. No object instantiated for it -- W_M9's output feeds
+% the readout directly in Part 3.
+
+%% ── PART 3+4: DIODE READOUT + dlnetwork ASSEMBLY ───────────────────────────
+% REVISED: MATLAB custom layers cannot return complex values from
+% predict()/forward() ("Define Custom Deep Learning Layers" doc). Every
+% layer now operates on REAL-STACKED [Re;Im] representations throughout
+% -- see the layer files for the math. realImagToComplexLayer.m and
+% realToComplexLayer.m are BOTH now unused/historical -- with everything
+% real-stacked end to end, there's no separate "convert to complex" step
+% needed: the observation [Re(r);Im(r)] feeds sim2_layer1 directly.
+
+readout_layer = diodeReadoutLayer('readout');
+
 statePath = [
-    featureInputLayer(EnvPars.N + 2, 'Name', 'obs')
-    fullyConnectedLayer(144, 'Name', 'fc1','BiasLearnRateFactor', 0)
-    % reluLayer('Name', 'relu1')
-    fullyConnectedLayer(144, 'Name', 'fc2','BiasLearnRateFactor', 0)
-    reluLayer('Name', 'relu2')
-    fullyConnectedLayer(EnvPars.n_actions, 'Name', 'output')];
+    featureInputLayer(2*EnvPars.N, 'Name', 'obs', 'Normalization', 'none')
+    sim2_layer1
+    prop_N_to_M
+    sim2_layer2
+    prop_M_to_Q
+    readout_layer];
 
 criticNet = dlnetwork(layerGraph(statePath));
 critic    = rlVectorQValueFunction(criticNet, ObsInfo, ActInfo);
 
-% plot(criticNet);
+%% ── 5. ENVIRONMENT ───────────────────────────────────────────────────────
+env = rlFunctionEnv(ObsInfo, ActInfo, ...
+      @(a,ls) stepFunction_nav_CST(a, ls, EnvPars), ...
+      @()     resetFunction_nav_CST(EnvPars));
 
 %% ── 7. AGENT ─────────────────────────────────────────────────────────────
 agentOpts = rlDQNAgentOptions(...
@@ -56,48 +198,38 @@ trainOpts = rlTrainingOptions(...
     'Verbose',              true, ...
     'Plots',                'none');
 
-% trainOpts.UseParallel = true;
-%trainOpts.ParallelizationOptions.Mode = "async";
+fprintf('=== Training phase ===\n');
+fprintf('N_cal=%d  |  MaxEpisodes=%d  |  MaxSteps=%d  |  n_actions=%d\n', ...
+        N_cal, EnvPars.MaxEpisodes, EnvPars.MaxStepsPerEpisode, EnvPars.n_actions);
 
-fprintf('=== Training phase ===\n'); %[output:7b222876]
-fprintf('N_cal=%d  |  MaxEpisodes=%d  |  MaxSteps=%d  |  n_actions=%d\n', ... %[output:group:8a399eba] %[output:20c546ca]
-        N_cal, EnvPars.MaxEpisodes, EnvPars.MaxStepsPerEpisode, EnvPars.n_actions); %[output:group:8a399eba] %[output:20c546ca]
-
-trainingStats = train(agent, env, trainOpts); %[output:9eff4c86]
+trainingStats = train(agent, env, trainOpts);
 
 %% ── 9. SAVE ──────────────────────────────────────────────────────────────
-save_path = fullfile('..', 'Dataset', strcat('dqn_agent_navigation_', num2str(Neurons_per_layer),'_neurons_1_ReLU_CST.mat');
+% NOTE: filename no longer references "Neurons_per_layer" -- that variable
+% (25*25=625) never matched any actual layer width (144=T_x*T_y, 225=M_x*M_y)
+% even in the original script, and SIM2 doesn't have a single "neuron count"
+% analog anyway (241 trainable phases across two layers + 1 frozen layer).
+% Original line was also missing a closing paren on fullfile(); fixed here.
+save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_225_neurons_CST.mat');
 criticNet = getModel(getCritic(agent));
 save(save_path, 'agent', 'trainingStats', 'criticNet', 'EnvPars');
-fprintf('Agent saved to %s\n', save_path); %[output:9699bef4]
+fprintf('Agent saved to %s\n', save_path);
 
-%[text] #### Functions
+%% ======================= Functions =======================
 function addingPathParentFolderByName(targetName)
-    %Place the matlab directory at the right position
-    % Start from the current directory
     currFolder = pwd;
     found = false;
-    
-    % Continue searching until you reach the root folder
     while true
-        % Get the parent folder
         [parentFolder, currentName] = fileparts(currFolder);
-        
-        % Check if the current folder's name is the target
         if strcmpi(currentName, targetName)
             found = true;
             break;
         end
-        
-        % If we've reached the root or no change, exit the loop
         if isempty(parentFolder) || strcmp(currFolder, parentFolder)
             break;
         end
-        
-        % Move one level up
         currFolder = parentFolder;
     end
-
     if found
         addpath(genpath(currFolder));
         fprintf('Adding matlab path to: %s\n', currFolder);
@@ -106,58 +238,32 @@ function addingPathParentFolderByName(targetName)
     end
 end
 
+function [x, y] = grid_coords_centered(Nx, Ny, dx, dy)
+    N = Nx*Ny;
+    x = zeros(N,1);
+    y = zeros(N,1);
+    for n = 1:N
+        iy = ceil(n/Nx);
+        ix = n - (iy-1)*Nx;
+        x(n) = (ix - 1 - (Nx-1)/2) * dx ;
+        y(n) = ((Ny-1)/2 - (iy - 1)) * dy;
+    end
+end
 
+function [F_amp, phase_min, phase_max] = build_amplitude_interpolant(mag_dB, phase_deg)
+    phase_rad = deg2rad(phase_deg(:));
+    phase_unwrapped = unwrap(phase_rad);
+    mag_lin = 10.^(mag_dB(:)/20);
 
-%[appendix]{"version":"1.0"}
-%---
-%[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":40}
-%---
-%[output:084ff5bb]
-%   data: {"dataType":"text","outputData":{"text":"Adding matlab path to: G:\\My Drive\\Work\\Research\\SIM\\code\n","truncated":false}}
-%---
-%[output:1b3a6c37]
-%   data: {"dataType":"textualVariable","outputData":{"name":"total_iteration","value":"1"}}
-%---
-%[output:7e2be390]
-%   data: {"dataType":"text","outputData":{"text":"Wireless packet type: SC\n","truncated":false}}
-%---
-%[output:94b50f6a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N_y","value":"4"}}
-%---
-%[output:54970599]
-%   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
-%---
-%[output:060c976e]
-%   data: {"dataType":"textualVariable","outputData":{"name":"M_y","value":"15"}}
-%---
-%[output:24212b63]
-%   data: {"dataType":"matrix","outputData":{"columns":20,"name":"zeta","rows":1,"type":"double","value":[["0.9800","0.9810","0.9820","0.9830","0.9840","0.9850","0.9860","0.9870","0.9880","0.9890","0.9900","0.9910","0.9920","0.9930","0.9940","0.9950","0.9960","0.9970","0.9980","0.9990"]]}}
-%---
-%[output:516e2386]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0021"}}
-%---
-%[output:77aaf974]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"9"}}
-%---
-%[output:4d6c3649]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T","value":"144"}}
-%---
-%[output:00757844]
-%   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"11.6443"}}
-%---
-%[output:75e1cdaa]
-%   data: {"dataType":"text","outputData":{"text":"=== Calibration phase ===\nGrid: 10 x 5 = 50 calibration positions\nCalibration complete.\n\n","truncated":false}}
-%---
-%[output:7b222876]
-%   data: {"dataType":"text","outputData":{"text":"=== Training phase ===\n","truncated":false}}
-%---
-%[output:20c546ca]
-%   data: {"dataType":"text","outputData":{"text":"N_cal=50  |  MaxEpisodes=100  |  MaxSteps=144  |  n_actions=9\n","truncated":false}}
-%---
-%[output:9eff4c86]
-%   data: {"dataType":"text","outputData":{"text":"Episode:   1\/100 | Episode reward:     3.94 | Episode steps:   37 | Average reward:     3.94 | Step Count:   37 | Episode Q0:  1505.89\nEpisode:   2\/100 | Episode reward:     3.02 | Episode steps:   26 | Average reward:     3.48 | Step Count:   63 | Episode Q0:  1079.58\nEpisode:   3\/100 | Episode reward:     5.37 | Episode steps:    8 | Average reward:     4.11 | Step Count:   71 | Episode Q0:   777.84\nEpisode:   4\/100 | Episode reward:    14.91 | Episode steps:  123 | Average reward:     6.81 | Step Count:  194 | Episode Q0:  1024.30\nEpisode:   5\/100 | Episode reward:     6.10 | Episode steps:  132 | Average reward:     6.67 | Step Count:  326 | Episode Q0:   606.05\nEpisode:   6\/100 | Episode reward:     1.51 | Episode steps:  144 | Average reward:     5.81 | Step Count:  470 | Episode Q0:   720.48\nEpisode:   7\/100 | Episode reward:    13.10 | Episode steps:   49 | Average reward:     6.85 | Step Count:  519 | Episode Q0:  1279.34\nEpisode:   8\/100 | Episode reward:     7.61 | Episode steps:  128 | Average reward:     6.95 | Step Count:  647 | Episode Q0:  1051.41\nEpisode:   9\/100 | Episode reward:     4.52 | Episode steps:   35 | Average reward:     6.68 | Step Count:  682 | Episode Q0:   576.84\nEpisode:  10\/100 | Episode reward:     6.99 | Episode steps:   36 | Average reward:     6.71 | Step Count:  718 | Episode Q0:   618.47\nEpisode:  11\/100 | Episode reward:     4.44 | Episode steps:  144 | Average reward:     6.50 | Step Count:  862 | Episode Q0:   448.17\nEpisode:  12\/100 | Episode reward:     0.29 | Episode steps:  144 | Average reward:     5.98 | Step Count: 1006 | Episode Q0:   558.44\nEpisode:  13\/100 | Episode reward:     2.09 | Episode steps:  144 | Average reward:     5.68 | Step Count: 1150 | Episode Q0:   222.93\nEpisode:  14\/100 | Episode reward:     1.58 | Episode steps:  144 | Average reward:     5.39 | Step Count: 1294 | Episode Q0:    90.52\nEpisode:  15\/100 | Episode reward:     6.90 | Episode steps:  144 | Average reward:     5.49 | Step Count: 1438 | Episode Q0:     3.88\nEpisode:  16\/100 | Episode reward:     2.57 | Episode steps:    4 | Average reward:     5.31 | Step Count: 1442 | Episode Q0:   504.25\nEpisode:  17\/100 | Episode reward:     4.64 | Episode steps:  123 | Average reward:     5.27 | Step Count: 1565 | Episode Q0:   230.82\nEpisode:  18\/100 | Episode reward:     5.74 | Episode steps:  144 | Average reward:     5.30 | Step Count: 1709 | Episode Q0:   -74.49\nEpisode:  19\/100 | Episode reward:    13.75 | Episode steps:  106 | Average reward:     5.74 | Step Count: 1815 | Episode Q0:   133.11\nEpisode:  20\/100 | Episode reward:     2.84 | Episode steps:   40 | Average reward:     5.60 | Step Count: 1855 | Episode Q0:   668.95\nEpisode:  21\/100 | Episode reward:     0.00 | Episode steps:  144 | Average reward:     5.33 | Step Count: 1999 | Episode Q0:   -97.31\nEpisode:  22\/100 | Episode reward:     8.03 | Episode steps:   17 | Average reward:     5.45 | Step Count: 2016 | Episode Q0:   554.37\nEpisode:  23\/100 | Episode reward:     2.28 | Episode steps:    3 | Average reward:     5.31 | Step Count: 2019 | Episode Q0:  -143.60\nEpisode:  24\/100 | Episode reward:     1.10 | Episode steps:  144 | Average reward:     5.14 | Step Count: 2163 | Episode Q0:    16.07\nEpisode:  25\/100 | Episode reward:     8.71 | Episode steps:   64 | Average reward:     5.28 | Step Count: 2227 | Episode Q0:   176.86\nEpisode:  26\/100 | Episode reward:    18.38 | Episode steps:   83 | Average reward:     5.79 | Step Count: 2310 | Episode Q0:  -189.57\nEpisode:  27\/100 | Episode reward:     2.54 | Episode steps:  144 | Average reward:     5.66 | Step Count: 2454 | Episode Q0:   -17.82\nEpisode:  28\/100 | Episode reward:     6.60 | Episode steps:  144 | Average reward:     5.70 | Step Count: 2598 | Episode Q0:    -2.78\nEpisode:  29\/100 | Episode reward:    10.69 | Episode steps:   25 | Average reward:     5.87 | Step Count: 2623 | Episode Q0:   439.31\nEpisode:  30\/100 | Episode reward:     3.42 | Episode steps:   30 | Average reward:     5.79 | Step Count: 2653 | Episode Q0:   183.80\nEpisode:  31\/100 | Episode reward:     4.64 | Episode steps:   18 | Average reward:     5.75 | Step Count: 2671 | Episode Q0:     4.61\nEpisode:  32\/100 | Episode reward:    10.21 | Episode steps:  144 | Average reward:     5.89 | Step Count: 2815 | Episode Q0:  -159.39\nEpisode:  33\/100 | Episode reward:     6.79 | Episode steps:  144 | Average reward:     5.92 | Step Count: 2959 | Episode Q0:    41.43\nEpisode:  34\/100 | Episode reward:    14.83 | Episode steps:  144 | Average reward:     6.18 | Step Count: 3103 | Episode Q0:  -225.99\nEpisode:  35\/100 | Episode reward:     6.47 | Episode steps:  144 | Average reward:     6.19 | Step Count: 3247 | Episode Q0:   157.03\nEpisode:  36\/100 | Episode reward:     2.87 | Episode steps:  144 | Average reward:     6.10 | Step Count: 3391 | Episode Q0:   175.44\nEpisode:  37\/100 | Episode reward:    22.02 | Episode steps:  144 | Average reward:     6.53 | Step Count: 3535 | Episode Q0:   314.02\nEpisode:  38\/100 | Episode reward:     8.08 | Episode steps:   46 | Average reward:     6.57 | Step Count: 3581 | Episode Q0:    90.49\nEpisode:  39\/100 | Episode reward:    12.69 | Episode steps:  144 | Average reward:     6.72 | Step Count: 3725 | Episode Q0:   139.16\nEpisode:  40\/100 | Episode reward:    12.45 | Episode steps:  144 | Average reward:     6.87 | Step Count: 3869 | Episode Q0:   133.93\nEpisode:  41\/100 | Episode reward:     6.18 | Episode steps:   19 | Average reward:     6.85 | Step Count: 3888 | Episode Q0:   148.18\nEpisode:  42\/100 | Episode reward:     3.20 | Episode steps:  144 | Average reward:     6.76 | Step Count: 4032 | Episode Q0:   225.31\nEpisode:  43\/100 | Episode reward:     7.75 | Episode steps:  144 | Average reward:     6.79 | Step Count: 4176 | Episode Q0:   110.41\nEpisode:  44\/100 | Episode reward:    17.89 | Episode steps:   86 | Average reward:     7.04 | Step Count: 4262 | Episode Q0:    41.87\nEpisode:  45\/100 | Episode reward:     8.17 | Episode steps:   26 | Average reward:     7.06 | Step Count: 4288 | Episode Q0:    26.21\nEpisode:  46\/100 | Episode reward:    11.15 | Episode steps:   49 | Average reward:     7.15 | Step Count: 4337 | Episode Q0:   -15.26\nEpisode:  47\/100 | Episode reward:     4.57 | Episode steps:  103 | Average reward:     7.10 | Step Count: 4440 | Episode Q0:   -41.02\nEpisode:  48\/100 | Episode reward:     8.14 | Episode steps:  144 | Average reward:     7.12 | Step Count: 4584 | Episode Q0:   -33.90\nEpisode:  49\/100 | Episode reward:     6.51 | Episode steps:   44 | Average reward:     7.11 | Step Count: 4628 | Episode Q0:   206.33\nEpisode:  50\/100 | Episode reward:     5.86 | Episode steps:  144 | Average reward:     7.08 | Step Count: 4772 | Episode Q0:   -32.89\nEpisode:  51\/100 | Episode reward:     3.16 | Episode steps:   37 | Average reward:     7.07 | Step Count: 4809 | Episode Q0:     8.23\nEpisode:  52\/100 | Episode reward:    14.91 | Episode steps:  144 | Average reward:     7.31 | Step Count: 4953 | Episode Q0:    68.65\nEpisode:  53\/100 | Episode reward:    13.40 | Episode steps:   56 | Average reward:     7.47 | Step Count: 5009 | Episode Q0:   126.87\nEpisode:  54\/100 | Episode reward:    15.10 | Episode steps:   76 | Average reward:     7.47 | Step Count: 5085 | Episode Q0:    91.14\nEpisode:  55\/100 | Episode reward:     6.67 | Episode steps:  144 | Average reward:     7.48 | Step Count: 5229 | Episode Q0:    17.38\nEpisode:  56\/100 | Episode reward:     1.91 | Episode steps:  144 | Average reward:     7.49 | Step Count: 5373 | Episode Q0:    51.23\nEpisode:  57\/100 | Episode reward:     9.61 | Episode steps:  144 | Average reward:     7.42 | Step Count: 5517 | Episode Q0:   -59.26\nEpisode:  58\/100 | Episode reward:     0.28 | Episode steps:  144 | Average reward:     7.27 | Step Count: 5661 | Episode Q0:   -46.53\nEpisode:  59\/100 | Episode reward:    13.04 | Episode steps:   86 | Average reward:     7.44 | Step Count: 5747 | Episode Q0:   -13.54\nEpisode:  60\/100 | Episode reward:     5.75 | Episode steps:  144 | Average reward:     7.42 | Step Count: 5891 | Episode Q0:    33.77\nEpisode:  61\/100 | Episode reward:    10.59 | Episode steps:  144 | Average reward:     7.54 | Step Count: 6035 | Episode Q0:   -33.53\nEpisode:  62\/100 | Episode reward:     9.52 | Episode steps:   19 | Average reward:     7.73 | Step Count: 6054 | Episode Q0:   -13.10\nEpisode:  63\/100 | Episode reward:     7.39 | Episode steps:  144 | Average reward:     7.83 | Step Count: 6198 | Episode Q0:    33.53\nEpisode:  64\/100 | Episode reward:     3.16 | Episode steps:   31 | Average reward:     7.86 | Step Count: 6229 | Episode Q0:    48.06\nEpisode:  65\/100 | Episode reward:     5.60 | Episode steps:  120 | Average reward:     7.84 | Step Count: 6349 | Episode Q0:    48.58\nEpisode:  66\/100 | Episode reward:     5.91 | Episode steps:   69 | Average reward:     7.90 | Step Count: 6418 | Episode Q0:   -21.26\nEpisode:  67\/100 | Episode reward:    13.10 | Episode steps:   85 | Average reward:     8.07 | Step Count: 6503 | Episode Q0:   -48.32\nEpisode:  68\/100 | Episode reward:    10.41 | Episode steps:  144 | Average reward:     8.17 | Step Count: 6647 | Episode Q0:    14.06\nEpisode:  69\/100 | Episode reward:    21.06 | Episode steps:  117 | Average reward:     8.31 | Step Count: 6764 | Episode Q0:    31.51\nEpisode:  70\/100 | Episode reward:     3.20 | Episode steps:   34 | Average reward:     8.32 | Step Count: 6798 | Episode Q0:    12.95\nEpisode:  71\/100 | Episode reward:    11.35 | Episode steps:   60 | Average reward:     8.55 | Step Count: 6858 | Episode Q0:    74.18\nEpisode:  72\/100 | Episode reward:    22.39 | Episode steps:  144 | Average reward:     8.83 | Step Count: 7002 | Episode Q0:    33.13\nEpisode:  73\/100 | Episode reward:     6.87 | Episode steps:   64 | Average reward:     8.93 | Step Count: 7066 | Episode Q0:    22.77\nEpisode:  74\/100 | Episode reward:    12.88 | Episode steps:  100 | Average reward:     9.16 | Step Count: 7166 | Episode Q0:    46.74\nEpisode:  75\/100 | Episode reward:    19.62 | Episode steps:  144 | Average reward:     9.38 | Step Count: 7310 | Episode Q0:   114.66\nEpisode:  76\/100 | Episode reward:     8.30 | Episode steps:  106 | Average reward:     9.18 | Step Count: 7416 | Episode Q0:    42.00\nEpisode:  77\/100 | Episode reward:    11.21 | Episode steps:  144 | Average reward:     9.35 | Step Count: 7560 | Episode Q0:     5.00\nEpisode:  78\/100 | Episode reward:     9.84 | Episode steps:  144 | Average reward:     9.42 | Step Count: 7704 | Episode Q0:    35.04\nEpisode:  79\/100 | Episode reward:    13.44 | Episode steps:   53 | Average reward:     9.47 | Step Count: 7757 | Episode Q0:    55.07\nEpisode:  80\/100 | Episode reward:    11.50 | Episode steps:  144 | Average reward:     9.63 | Step Count: 7901 | Episode Q0:     8.98\nEpisode:  81\/100 | Episode reward:    21.18 | Episode steps:  144 | Average reward:     9.96 | Step Count: 8045 | Episode Q0:   -10.40\nEpisode:  82\/100 | Episode reward:    20.95 | Episode steps:  142 | Average reward:    10.18 | Step Count: 8187 | Episode Q0:    -4.35\nEpisode:  83\/100 | Episode reward:    16.79 | Episode steps:  144 | Average reward:    10.38 | Step Count: 8331 | Episode Q0:     6.68\nEpisode:  84\/100 | Episode reward:     5.75 | Episode steps:  144 | Average reward:    10.20 | Step Count: 8475 | Episode Q0:    -6.32\nEpisode:  85\/100 | Episode reward:    20.25 | Episode steps:  144 | Average reward:    10.47 | Step Count: 8619 | Episode Q0:   -19.33\nEpisode:  86\/100 | Episode reward:    11.02 | Episode steps:   70 | Average reward:    10.64 | Step Count: 8689 | Episode Q0:    -0.44\nEpisode:  87\/100 | Episode reward:     9.92 | Episode steps:  123 | Average reward:    10.39 | Step Count: 8812 | Episode Q0:     9.09\nEpisode:  88\/100 | Episode reward:     6.16 | Episode steps:  144 | Average reward:    10.35 | Step Count: 8956 | Episode Q0:    26.25\nEpisode:  89\/100 | Episode reward:    12.76 | Episode steps:  144 | Average reward:    10.36 | Step Count: 9100 | Episode Q0:    14.80\nEpisode:  90\/100 | Episode reward:     4.87 | Episode steps:  144 | Average reward:    10.20 | Step Count: 9244 | Episode Q0:    49.22\nEpisode:  91\/100 | Episode reward:    14.26 | Episode steps:   71 | Average reward:    10.37 | Step Count: 9315 | Episode Q0:     4.63\nEpisode:  92\/100 | Episode reward:     2.81 | Episode steps:   47 | Average reward:    10.36 | Step Count: 9362 | Episode Q0:    11.51\nEpisode:  93\/100 | Episode reward:     4.27 | Episode steps:  144 | Average reward:    10.29 | Step Count: 9506 | Episode Q0:     2.04\nEpisode:  94\/100 | Episode reward:     1.87 | Episode steps:  144 | Average reward:     9.97 | Step Count: 9650 | Episode Q0:    19.30\nEpisode:  95\/100 | Episode reward:    10.08 | Episode steps:  144 | Average reward:    10.01 | Step Count: 9794 | Episode Q0:    -3.28\nEpisode:  96\/100 | Episode reward:    14.77 | Episode steps:  108 | Average reward:    10.08 | Step Count: 9902 | Episode Q0:    -3.51\nEpisode:  97\/100 | Episode reward:    11.24 | Episode steps:  117 | Average reward:    10.21 | Step Count: 10019 | Episode Q0:    -8.38\nEpisode:  98\/100 | Episode reward:    12.71 | Episode steps:  144 | Average reward:    10.30 | Step Count: 10163 | Episode Q0:     1.44\nEpisode:  99\/100 | Episode reward:    17.81 | Episode steps:  144 | Average reward:    10.53 | Step Count: 10307 | Episode Q0:    44.70\nEpisode: 100\/100 | Episode reward:    16.34 | Episode steps:  144 | Average reward:    10.74 | Step Count: 10451 | Episode Q0:    17.34\n","truncated":false}}
-%---
-%[output:9699bef4]
-%   data: {"dataType":"text","outputData":{"text":"Agent saved to ..\\Dataset\\dqn_agent_navigation_81_neurons_norelu.mat\n","truncated":false}}
-%---
+    [phase_sorted, idx] = sort(phase_unwrapped);
+    mag_sorted = mag_lin(idx);
+
+    phase_wrapped = mod(phase_sorted, 2*pi);
+    [phase_wrapped, idx2] = sort(phase_wrapped);
+    mag_sorted = mag_sorted(idx2);
+
+    phase_min = phase_wrapped(1);
+    phase_max = phase_wrapped(end);
+
+    F_amp = griddedInterpolant(phase_wrapped, mag_sorted, 'pchip', 'nearest');
+end

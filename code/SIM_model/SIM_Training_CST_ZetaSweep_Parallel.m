@@ -262,30 +262,30 @@ fprintf('\nFull sweep done: %d zeta values, %.1f s total.\n', n_zeta, toc(t_swee
 delete(gcp('nocreate'));
 fprintf('Parallel pool released.\n');
 
-%% ----------------- Combined comparison plot -----------------
-cmap = parula(n_zeta);
-figure; hold on; grid on;
-h_highlight = [];
-for iz = 1:n_zeta
-    if isempty(loss_hist_all{iz})
-        continue;   % shouldn't happen, but skip defensively if a zeta value was never run
-    end
-    if abs(zeta(iz) - zeta_highlight) < 1e-9
-        h_highlight = semilogy(loss_hist_all{iz}, 'LineWidth', 3, 'Color', 'r');
-    else
-        semilogy(loss_hist_all{iz}, 'LineWidth', 1, 'Color', cmap(iz,:));
-    end
-end
-set(gca, 'YScale', 'log', 'FontSize', font);
-colormap(gca, parula);
-cb = colorbar; cb.Label.String = '\zeta value'; cb.Label.Interpreter = 'tex';
-clim([zeta(1) zeta(end)]);
-xlabel('Iterations', 'Interpreter','latex');
-ylabel('$\mathcal{L}=\|\beta G-F\|^2$', 'Interpreter','latex');
-title(sprintf('CST training, full $\\zeta$ sweep ($f_c$=%.0f GHz)', fc/1e9), 'Interpreter','latex');
-if ~isempty(h_highlight)
-    legend(h_highlight, sprintf('\\zeta=%.3f (selected)', zeta_highlight), 'Location','best');
-end
+% %% ----------------- Combined comparison plot -----------------
+% cmap = parula(n_zeta);
+% figure; hold on; grid on;
+% h_highlight = [];
+% for iz = 1:n_zeta
+%     if isempty(loss_hist_all{iz})
+%         continue;   % shouldn't happen, but skip defensively if a zeta value was never run
+%     end
+%     if abs(zeta(iz) - zeta_highlight) < 1e-9
+%         h_highlight = semilogy(loss_hist_all{iz}, 'LineWidth', 3, 'Color', 'r');
+%     else
+%         semilogy(loss_hist_all{iz}, 'LineWidth', 1, 'Color', cmap(iz,:));
+%     end
+% end
+% set(gca, 'YScale', 'log', 'FontSize', font);
+% colormap(gca, parula);
+% cb = colorbar; cb.Label.String = '\zeta value'; cb.Label.Interpreter = 'tex';
+% clim([zeta(1) zeta(end)]);
+% xlabel('Iterations', 'Interpreter','latex');
+% ylabel('$\mathcal{L}=\|\beta G-F\|^2$', 'Interpreter','latex');
+% title(sprintf('CST training, full $\\zeta$ sweep ($f_c$=%.0f GHz)', fc/1e9), 'Interpreter','latex');
+% if ~isempty(h_highlight)
+%     legend(h_highlight, sprintf('\\zeta=%.3f (selected)', zeta_highlight), 'Location','best');
+% end
 
 %% ----------------- Save combined results -----------------
 path = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_sweep_28GHz.mat');
