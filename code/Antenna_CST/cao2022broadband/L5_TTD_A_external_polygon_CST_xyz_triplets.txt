@@ -1,5 +1,0 @@
--d+slot_w/2 0 (z_L5+z_L6)/2
--d-cl1 0 (z_L5+z_L6)/2
--d-cl1 -cl2 (z_L5+z_L6)/2
-0 -cl2 (z_L5+z_L6)/2
-0 -d+slot_w/2 (z_L5+z_L6)/2
