@@ -1,5 +1,5 @@
-%% Step 1. CALIBRATION ───────────────────────────────────────────────────────
-fprintf('=== Calibration phase ===\n');
+%% Step 1. CALIBRATION ───────────────────────────────────────────────────────EnvPars.psi_x_cal
+fprintf('=== Calibration phase ===\n'); %[output:106d88ec]
 
 % Grid: 1 position per square metre over L_hall × W_hall
 % Margin keeps MU away from walls
@@ -12,7 +12,7 @@ y_cal    = linspace(EnvPars.MU_margin, W_hall - EnvPars.MU_margin, n_y_cal);
 X_cal    = X_cal(:);
 Y_cal    = Y_cal(:);
 N_cal    = numel(X_cal);
-fprintf('Grid: %d x %d = %d calibration positions\n', n_x_cal, n_y_cal, N_cal);
+fprintf('Grid: %d x %d = %d calibration positions\n', n_x_cal, n_y_cal, N_cal); %[output:3da17f4a]
 
 % Preallocate calibration tables
 peak_map       = zeros(N_cal, EnvPars.T_x, EnvPars.T_y);
@@ -46,7 +46,7 @@ for pos = 1:N_cal
     [global_max_cal(pos), idx] = max(slice(:));
     [best_tx_cal(pos), best_ty_cal(pos)] = ind2sub([EnvPars.T_x, EnvPars.T_y], idx);
 end
-fprintf('Calibration complete.\n\n');
+fprintf('Calibration complete.\n\n'); %[output:2820f075]
 
 % Store calibration in EnvPars — available to step/reset functions
 EnvPars.N_cal          = N_cal;
@@ -74,8 +74,18 @@ function [psi_x, psi_y] = computePsiFromPos(pos_MU, EnvPars)
     psi_y = mod(2*pi * EnvPars.d_x * u_y / EnvPars.lambda, 2*pi);
 end
 
+
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
 %   data: {"layout":"onright","rightPanelPercent":40}
+%---
+%[output:106d88ec]
+%   data: {"dataType":"text","outputData":{"text":"=== Calibration phase ===\n","truncated":false}}
+%---
+%[output:3da17f4a]
+%   data: {"dataType":"text","outputData":{"text":"Grid: 10 x 5 = 50 calibration positions\n","truncated":false}}
+%---
+%[output:2820f075]
+%   data: {"dataType":"text","outputData":{"text":"Calibration complete.\n\n","truncated":false}}
 %---
