@@ -54,13 +54,25 @@ IsDone  = at_peak || (LoggedSignals.stepCount >= EnvPars.MaxStepsPerEpisode);
 observation = [real(r); imag(r)];
 
 %% Log DOA estimate at current position
-R_2D = reshape(abs(r), [EnvPars.N_x, EnvPars.N_y]);
-[~, idx]                   = max(R_2D, [], 'all');
-[n_y_max, n_x_max]         = ind2sub(size(R_2D), idx);
-LoggedSignals.psi_x_est    = mod(2*pi*((n_x_max-1) + ...
-    (EnvPars.t_x(t_psi)-1)/EnvPars.T_x)/EnvPars.N_x, 2*pi);
-LoggedSignals.psi_y_est    = mod(2*pi*((n_y_max-1) + ...
-    (EnvPars.t_y(t_psi)-1)/EnvPars.T_y)/EnvPars.N_y, 2*pi);
+% R_2D = reshape(abs(r), [EnvPars.N_x, EnvPars.N_y]);
+% [~, idx]                   = max(R_2D, [], 'all');
+% [n_y_max, n_x_max]         = ind2sub(size(R_2D), idx);
+% LoggedSignals.psi_x_est    = mod(2*pi*((n_x_max-1) + ...
+%     (EnvPars.t_x(t_psi)-1)/EnvPars.T_x)/EnvPars.N_x, 2*pi);
+% LoggedSignals.psi_y_est    = mod(2*pi*((n_y_max-1) + ...
+%     (EnvPars.t_y(t_psi)-1)/EnvPars.T_y)/EnvPars.N_y, 2*pi);
+
+R = flipud(fliplr(reshape(abs(r), [EnvPars.N_x, EnvPars.N_y])))';
+[~, linear_idx] = max(R, [], 'all');
+n_psi_x_max = ceil(linear_idx/EnvPars.N_x);
+n_psi_y_max = linear_idx-(n_psi_x_max-1)*EnvPars.N_x;
+
+% Map snapshot index to temporal coords
+t_psi_x_max = EnvPars.t_x(t_psi);
+t_psi_y_max = EnvPars.t_y(t_psi);
+LoggedSignals.psi_x_est = mod(2*pi * (n_psi_x_max + (t_psi_x_max) / EnvPars.T_x) / EnvPars.N_x, 2*pi);
+LoggedSignals.psi_y_est = mod(2*pi * (n_psi_y_max + (t_psi_y_max) / EnvPars.T_y) / EnvPars.N_y, 2*pi);
+
 LoggedSignals.error_sum    = 0.5*(abs(LoggedSignals.psi_x - LoggedSignals.psi_x_est) + ...
                                    abs(LoggedSignals.psi_y - LoggedSignals.psi_y_est));
 LoggedSignals.at_peak      = at_peak;

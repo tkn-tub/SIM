@@ -7,7 +7,7 @@ Parameters;   % loads all base variables into workspace and EnvPars %[output:1b3
 Calibration %[output:75e1cdaa]
 
 % In A_Training_Navigation.mlx — after Calibration runs
-EnvPars.MaxEpisodes = EnvPars.N_cal * 400;
+EnvPars.MaxEpisodes = EnvPars.N_cal * 200;
 %%
 %% ── 5. ENVIRONMENT ───────────────────────────────────────────────────────
 env = rlFunctionEnv(ObsInfo, ActInfo, ...
@@ -110,7 +110,7 @@ end
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":40}
+%   data: {"layout":"inline","rightPanelPercent":40}
 %---
 %[output:084ff5bb]
 %   data: {"dataType":"text","outputData":{"text":"Adding matlab path to: G:\\My Drive\\Work\\Research\\SIM\\code\n","truncated":false}}

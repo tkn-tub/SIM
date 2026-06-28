@@ -1,4 +1,4 @@
-function [observation, LoggedSignals] = resetFunction_nav(EnvPars)
+function [observation, LoggedSignals] = resetFunction_nav_CST(EnvPars)
 
 %% Pick random calibration position
 pos_idx = randi(EnvPars.N_cal);
