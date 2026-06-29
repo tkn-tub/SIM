@@ -13,6 +13,8 @@ Parameters;   % loads all base variables into workspace and EnvPars
 %Update the G matrix to use the one computed with CST
 EnvPars.G = EnvPars.G_CST;   % SIM-2 uses the CST-realistic SIM-1 front-end
 EnvPars.U_func = EnvPars.U_func_CST;
+M_x = 19;
+M_y = M_x;
 
 Calibration
 
@@ -181,7 +183,7 @@ trainingStats = train(agent, env, trainOpts);
 %%
 %[text] ## ── 9. SAVE ──────────────────────────────────────────────────────────────
 %[text] NOTE: filename no longer references "Neurons\_per\_layer" -- that variable (25\*25=625) never matched any actual layer width (144=T\_x\*T\_y, 225=M\_x\*M\_y) even in the original script, and SIM2 doesn't have a single "neuron count" analog anyway (241 trainable phases across two layers + 1 frozen layer). Original line was also missing a closing paren on fullfile(); fixed here.
-save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_775_neurons_CST.mat');
+save_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_775_phases_CST_Nx_8_Mx_19.mat');
 criticNet = getModel(getCritic(agent));
 save(save_path, 'agent', 'trainingStats', 'criticNet', 'EnvPars');
 fprintf('Agent saved to %s\n', save_path);
