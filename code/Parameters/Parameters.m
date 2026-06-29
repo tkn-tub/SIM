@@ -62,7 +62,9 @@ kappa=waveform_k;
 %[text] #### SIM paramaters
 %Number of atoms in the first layer
 %N=16; %see [1, Sec. VI.C.]
-N_x=[2 3 4 5 6 7 8 9 10 11 12 13 14 15];%[4 5 6 7 8 9];%SIM dimension of the zero Layer
+N_x_vector=4:15;%SIM dimension of the zero Layer
+N_y_vector=N_x_vector;
+N_vector=N_x_vector.*N_y_vector;
 N_x=4; %as follows from [1, Sec. IV A] for the (4x4 grid)
 % N_x=2 %as follows from [1, Sec. IV A] for the (2x2 grid)
 N_y=N_x; %to account for a balanced error in the x an y axes
@@ -167,7 +169,10 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:6a191799]
 %Fixing parameters
 T_x=12;
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
-T=T_x.*T_y %[output:480d9dc6]
+T=T_x.*T_y;
+T_x_vector=12:17;
+T_y_vector=T_x_vector;
+T_vector=T_x_vector.*T_y_vector;
 %[text] #### Channel
 maxDoppler = (MU_speed/physconst('LightSpeed'))*fc;
 %Evaluating the delay spread according to Table 7.5-6 Table 7.5-6 Part-3: Channel model parameters for InF in page 48
@@ -374,7 +379,7 @@ EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
 % ---- CST amplitude interpolant for the input layer (layer 0 / v0) ----
 % Built the same way as in SIM_Training_CST_SingleZeta_Parallel.m
 % (pchip + 'nearest' flat extrapolation, NOT periodic).
-load t_y_x.mat %[output:67833505]
+load t_y_x.mat
 [EnvPars.F_amp, EnvPars.phase_min_meas, EnvPars.phase_max_meas] = ...
     build_amplitude_interpolant(t_y_x_amp_dB, t_y_x_phase_deg);
 
@@ -393,14 +398,14 @@ EnvPars.G = G_func(n_s_grid, n_psi_grid);
 
 % ---- Trained CST-realistic SIM-1 G (separate from analytic EnvPars.G) ----
 
-sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_28_GHz.mat');
-S_sim1 = load(sim1_file, 'G', 'beta');
-assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ...
-    'Loaded G is %dx%d but expected %dx%d.', ...
-    size(S_sim1.G,1), size(S_sim1.G,2), EnvPars.N, EnvPars.N);
-EnvPars.G_CST = S_sim1.beta * S_sim1.G;
-dft_residual = norm(EnvPars.G_CST - EnvPars.G, 'fro') / norm(EnvPars.G, 'fro');
-fprintf('Loaded CST SIM-1 G_CST. Deviation from analytic G: %.3f%%n', 100*dft_residual);
+% sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_28_GHz.mat');
+% S_sim1 = load(sim1_file, 'G', 'beta');
+% assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ...
+%     'Loaded G is %dx%d but expected %dx%d.', ...
+%     size(S_sim1.G,1), size(S_sim1.G,2), EnvPars.N, EnvPars.N);
+% EnvPars.G_CST = S_sim1.beta * S_sim1.G;
+% dft_residual = norm(EnvPars.G_CST - EnvPars.G, 'fro') / norm(EnvPars.G, 'fro');
+% fprintf('Loaded CST SIM-1 G_CST. Deviation from analytic G: %.3f%%n', 100*dft_residual);
 %[text] #### Plotting parameters
 font=20;
 
@@ -490,12 +495,6 @@ end
 %[output:6a191799]
 %   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
 %---
-%[output:480d9dc6]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T","value":"144"}}
-%---
 %[output:3d71e6f9]
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
-%---
-%[output:67833505]
-%   data: {"dataType":"error","outputData":{"errorType":"runtime","text":"Error using <a href=\"matlab:matlab.lang.internal.introspective.errorDocCallback('load')\" style=\"font-weight:bold\">load<\/a>\nt_y_x.mat is not found in the current folder or on the MATLAB path, but exists in:\n    G:\\My Drive\\Work\\Research\\SIM\\code\\Dataset\n\n<a href = \"matlab:internal.matlab.desktop.commandwindow.executeCommandForUser('cd ''G:\\My Drive\\Work\\Research\\SIM\\code\\Dataset''')\">Change the MATLAB current folder<\/a> or <a href = \"matlab:internal.matlab.desktop.commandwindow.executeCommandForUser('addpath ''G:\\My Drive\\Work\\Research\\SIM\\code\\Dataset''')\">add its folder to the MATLAB path<\/a>."}}
 %---
