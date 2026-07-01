@@ -399,14 +399,14 @@ EnvPars.G = G_func(n_s_grid, n_psi_grid);
 % ---- Trained CST-realistic SIM-1 G (separate from analytic EnvPars.G) ----
 
 % sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_28_GHz.mat');
-sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_0.988_Nx_6.mat');
-S_sim1 = load(sim1_file, 'G', 'beta');
-assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ... %[output:group:8aa0d8d0] %[output:5997375d]
-    'Loaded G is %dx%d but expected %dx%d.', ... %[output:5997375d]
-    size(S_sim1.G,1), size(S_sim1.G,2), EnvPars.N, EnvPars.N); %[output:group:8aa0d8d0] %[output:5997375d]
-EnvPars.G_CST = S_sim1.beta * S_sim1.G;
-dft_residual = norm(EnvPars.G_CST - EnvPars.G, 'fro') / norm(EnvPars.G, 'fro');
-fprintf('Loaded CST SIM-1 G_CST. Deviation from analytic G: %.3f%%n', 100*dft_residual);
+% % sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_0.988_Nx_6.mat');
+% S_sim1 = load(sim1_file, 'G', 'beta');
+% assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ... %[output:group:8aa0d8d0] %[output:5997375d]
+%     'Loaded G is %dx%d but expected %dx%d.', ... %[output:5997375d]
+%     size(S_sim1.G,1), size(S_sim1.G,2), EnvPars.N, EnvPars.N); %[output:group:8aa0d8d0] %[output:5997375d]
+% EnvPars.G_CST = S_sim1.beta * S_sim1.G;
+% dft_residual = norm(EnvPars.G_CST - EnvPars.G, 'fro') / norm(EnvPars.G, 'fro');
+% fprintf('Loaded CST SIM-1 G_CST. Deviation from analytic G: %.3f%%n', 100*dft_residual);
 %[text] #### Plotting parameters
 font=20;
 

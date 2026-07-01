@@ -11,8 +11,8 @@ addingPathParentFolderByName('code');
 Parameters;   % loads all base variables into workspace and EnvPars
 
 %Update the G matrix to use the one computed with CST
-EnvPars.G = EnvPars.G_CST;   % SIM-2 uses the CST-realistic SIM-1 front-end
-EnvPars.U_func = EnvPars.U_func_CST;
+% EnvPars.G = EnvPars.G_CST;   % SIM-2 uses the CST-realistic SIM-1 front-end
+% EnvPars.U_func = EnvPars.U_func_CST;
 M_x = 19;
 M_y = M_x;
 
