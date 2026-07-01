@@ -28,11 +28,15 @@ load t_y_x.mat
 F = dft2_matrix(N_x, N_y);
 
 %% ----------------- Single fixed zeta/eta, increased iterations -----------------
-maxIter = 2000
+maxIter = 1500
 zeta_fixed = 0.995 %0.988;   % same value established from the ablation study; adjust if needed
+M_x=27
+M_y=M_x;
+M=M_x*M_y;
+L=13
 h = 1e-5;              % finite-difference step (radians)
 checkpoint_every = 25;
-checkpoint_path = 'SIM_training_CST_checkpoint.mat';
+checkpoint_path = 'SIM_training_CST_checkpoint_zeta_0_995_Nx_8_Mx_27_L_13.mat';
 pool_refresh_every = 100;   % recycle the parallel pool periodically during long runs
 
 %% ----------------- Geometry (unchanged from the original script) -----------------
@@ -335,7 +339,7 @@ end
 fprintf('\nTraining done: %d iterations, %.1f s total.\n', maxIter, toc(t_start));
 
 %% ----------------- Save final result -----------------
-path = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_0_995_Nx_8.mat');
+path = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_0_995_Nx_8_Mx_27_L_13.mat');
 save(path, 'xi', 'Upsilon', 'G', 'beta', 'loss_hist', 'beta_hist', 'gap_frac_hist', ...
      'zeta_fixed', 'maxIter', 'eta0', 'seed', 'fc', '-v7.3');
 

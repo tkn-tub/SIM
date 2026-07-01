@@ -32,7 +32,7 @@ maxIter = 2000
 zeta_fixed = 0.995 %0.988;   % same value established from the ablation study; adjust if needed
 h = 1e-5;              % finite-difference step (radians)
 checkpoint_every = 25;
-checkpoint_path = 'SIM_training_CST_checkpoint.mat';
+checkpoint_path = 'SIM_training_CST_checkpoint_zeta_0_995.mat';
 pool_refresh_every = 100;   % recycle the parallel pool periodically during long runs
 
 %% ----------------- Geometry (unchanged from the original script) -----------------
