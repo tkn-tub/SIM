@@ -111,12 +111,43 @@ if isfile(checkpoint_path)
         return;
     end
 else
-    xi = cell(L,1);
-    Upsilon = cell(L,1);
-    for l = 1:L
-        xi{l} = 2*pi*rand(M,1);
-        amp_l = F_amp(mod(xi{l}, 2*pi));
-        Upsilon{l} = diag(amp_l .* exp(1i*xi{l}));
+    % ----- Warm-start: upsample trained Mx=17 phases to Mx=27 grid -----
+    warm_start_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_28_GHz.mat');
+    % ^^^ replace with whatever filename holds your trained Mx=17 result
+    
+    if isfile(warm_start_file)
+        fprintf('Warm-starting from %s ...\n', warm_start_file);
+        S_warm = load(warm_start_file, 'xi');
+        M_warm = numel(S_warm.xi{1});
+        Mx_warm = round(sqrt(M_warm));   % assumes square grid
+        L_warm  = numel(S_warm.xi);
+        
+        xi = cell(L,1);
+        Upsilon = cell(L,1);
+        for l = 1:L
+            if l <= L_warm
+                % upsample trained layer l to the new grid
+                xi_2d = reshape(mod(S_warm.xi{l}, 2*pi), Mx_warm, Mx_warm);
+                xi_2d_up = imresize(xi_2d, [M_x, M_x], 'bilinear');
+                xi{l} = xi_2d_up(:);
+            else
+                % extra layers beyond L_warm: initialize randomly
+                xi{l} = 2*pi*rand(M,1);
+            end
+            amp_l = F_amp(mod(xi{l}, 2*pi));
+            Upsilon{l} = diag(amp_l .* exp(1i*xi{l}));
+        end
+        fprintf('Warm-start done: %d layers upsampled from %dx%d to %dx%d.\n', ...
+            min(L, L_warm), Mx_warm, Mx_warm, M_x, M_x);
+    else
+        fprintf('Warm-start file not found -- falling back to random init.\n');
+        xi = cell(L,1);
+        Upsilon = cell(L,1);
+        for l = 1:L
+            xi{l} = 2*pi*rand(M,1);
+            amp_l = F_amp(mod(xi{l}, 2*pi));
+            Upsilon{l} = diag(amp_l .* exp(1i*xi{l}));
+        end
     end
     eta = eta0;
     loss_hist = zeros(maxIter,1);
