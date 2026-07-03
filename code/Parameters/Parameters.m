@@ -62,7 +62,7 @@ kappa=waveform_k;
 %[text] #### SIM paramaters
 %Number of atoms in the first layer
 %N=16; %see [1, Sec. VI.C.]
-N_x_vector=4:15;%SIM dimension of the zero Layer
+N_x_vector=2:5;%SIM dimension of the zero Layer
 N_y_vector=N_x_vector;
 N_vector=N_x_vector.*N_y_vector;
 N_x=8; %as follows from [1, Sec. IV A] for the (4x4 grid)
@@ -170,7 +170,7 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:6a191799]
 T_x=17;
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
-T_x_vector=12:17;
+T_x_vector=35:40;
 T_y_vector=T_x_vector;
 T_vector=T_x_vector.*T_y_vector;
 %[text] #### Channel
