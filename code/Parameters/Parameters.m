@@ -65,7 +65,7 @@ kappa=waveform_k;
 N_x_vector=2:5;%SIM dimension of the zero Layer
 N_y_vector=N_x_vector;
 N_vector=N_x_vector.*N_y_vector;
-N_x=8; %as follows from [1, Sec. IV A] for the (4x4 grid)
+N_x=4 %as follows from [1, Sec. IV A] for the (4x4 grid)
 % N_x=2 %as follows from [1, Sec. IV A] for the (2x2 grid)
 N_y=N_x; %to account for a balanced error in the x an y axes
 N=N_x.*N_y %[output:4cd315df]
@@ -167,7 +167,7 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:6a191799]
 % T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 % T=T_x.*T_y
 %Fixing parameters
-T_x=17;
+T_x=40
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
 T_x_vector=35:40;
@@ -326,7 +326,7 @@ EnvPars.delta_moves = [-1,-1; -1, 0; -1,+1;
                        +1,-1; +1, 0; +1,+1];
 EnvPars.n_actions   = size(EnvPars.delta_moves, 1);   % 9
 
-EnvPars.DiscountFactor=0.5;
+EnvPars.DiscountFactor=0.95
 %[text] Calculation of the EpsilonDecay factor
 %[text] We calculate the number of random visits to states, which is given by
 %[text] random steps needed = number of actions × visits per action = 144×150=21,600 steps

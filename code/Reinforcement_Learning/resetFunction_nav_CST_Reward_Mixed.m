@@ -27,6 +27,10 @@ r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
 % stepFunction_nav_CST.m exactly. Phase preserved; t_x/t_y stay in
 % LoggedSignals for in-silico bookkeeping but are not observed.
 observation = [real(r); imag(r)];
+
+%used to evaluate the peak position
+LoggedSignals.prev_peak = max(abs(r).^2) / LoggedSignals.global_max;
+
 end
 
 %[appendix]{"version":"1.0"}
