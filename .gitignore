@@ -36,3 +36,5 @@ code/DoA/Parameters.asv
 /code/Dataset/ablation_ckpt_zeta_0.987
 /code/Dataset/ablation_ckpt_zeta_0.988
 /code/Dataset/ablation_ckpt_zeta_0.989
+/code/Dataset/SIM_Nx_4_Mx_25_Reward_Mixed_checkpoints
+code/Reinforcement_Learning/C_Eval_Checkpoints.m

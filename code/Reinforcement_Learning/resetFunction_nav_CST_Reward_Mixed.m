@@ -24,11 +24,10 @@ v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
 r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
 
 % Observation: coherent field, [Re(r); Im(r)] stacked -- matches
-% stepFunction_nav_CST.m exactly. Phase preserved; t_x/t_y stay in
-% LoggedSignals for in-silico bookkeeping but are not observed.
+% stepFunction_nav_CST_Acquisition.m exactly.
 observation = [real(r); imag(r)];
 
-%used to evaluate the peak position
+% Initialize potential for the gradient (shaping) term
 LoggedSignals.prev_peak = max(abs(r).^2) / LoggedSignals.global_max;
 
 end

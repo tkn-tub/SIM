@@ -65,16 +65,16 @@ kappa=waveform_k;
 N_x_vector=2:5;%SIM dimension of the zero Layer
 N_y_vector=N_x_vector;
 N_vector=N_x_vector.*N_y_vector;
-N_x=4 %as follows from [1, Sec. IV A] for the (4x4 grid)
+N_x=4 %as follows from [1, Sec. IV A] for the (4x4 grid) %[output:4cd315df]
 % N_x=2 %as follows from [1, Sec. IV A] for the (2x2 grid)
 N_y=N_x; %to account for a balanced error in the x an y axes
-N=N_x.*N_y %[output:4cd315df]
+N=N_x.*N_y %[output:18b88e21]
 
 %number of meta-atoms in the intermediate layers
 M=225;%as follows from [1, Sec. IV A] for the (4x4 grid)
 % M=121;%as follows from [1, Sec. IV A] for the (4x4 grid)
-M_x=sqrt(M)  %[output:18b88e21]
-M_y=M_x %[output:323fdd42]
+M_x=sqrt(M)  %[output:323fdd42]
+M_y=M_x %[output:2bef69a2]
 %number of intermediate SIM layers
 L=13; %as follows from [1, Sec. IV A] for the (4x4 grid)
 % L=7;%as follows from [1, Sec. IV A] for the (2x2 grid)
@@ -167,7 +167,7 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:6a191799]
 % T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 % T=T_x.*T_y
 %Fixing parameters
-T_x=40
+T_x=40 %[output:3d71e6f9]
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
 T_x_vector=35:40;
@@ -236,7 +236,7 @@ noisePower_dB = totalNoiseDensity_dBHz + 10*log10(BW);
 %[text] #### SNR evaluation
 %Free path loss in the direct link IRS-MU
 Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
-SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:3d71e6f9]
+SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:23c1d2de]
 
 %[text] #### Agent parameters
 %Environment related parameters
@@ -299,15 +299,15 @@ EnvPars.MU_margin = 0.5; %margin of the MU from the walls.
 %Training Parameters
 % Episode parameters (will be initialized on reset)
 EnvPars.MaxEpisodes=T*25; %number of posible combination of phases, and 10 times to assure the random reset makes at least once per position
-% Episodes: each calibration position visited ~200 times on average
-EnvPars.MaxEpisodes = 0;
+EnvPars.MaxEpisodes=5000;
+
 
 EnvPars.psi_x = 0;
 EnvPars.psi_y = 0;
 %EnvPars.MaxStepsPerEpisode = EnvPars.T;%number of steps per episode equals the number of packets along the channel coherence time
 % Max steps: longest possible Manhattan path across the grid
 EnvPars.MaxStepsPerEpisode = 1.5*(EnvPars.T_x + EnvPars.T_y);
-EnvPars.MaxStepsPerEpisode = EnvPars.T_x*EnvPars.T_y;
+% EnvPars.MaxStepsPerEpisode = EnvPars.T_x*EnvPars.T_y;
 
 EnvPars.tolerance = pi/80; % error tolerance reward C
 EnvPars.tolerance = 2*pi / (EnvPars.N_x * EnvPars.T_x);  % ≈ 0.13 rad reward B
@@ -326,7 +326,7 @@ EnvPars.delta_moves = [-1,-1; -1, 0; -1,+1;
                        +1,-1; +1, 0; +1,+1];
 EnvPars.n_actions   = size(EnvPars.delta_moves, 1);   % 9
 
-EnvPars.DiscountFactor=0.95
+EnvPars.DiscountFactor=0.95 %[output:5580c95d]
 %[text] Calculation of the EpsilonDecay factor
 %[text] We calculate the number of random visits to states, which is given by
 %[text] random steps needed = number of actions × visits per action = 144×150=21,600 steps
@@ -334,13 +334,20 @@ EnvPars.DiscountFactor=0.95
 %[text] EpsilonDecay=(ε\_start − ε\_min)  / random steps  = 0.95 / 21,600,
 %[text] where ε\_start =1 is the starting point, always exploring, and ε\_min = 0.05 is when the system is exploiting and ε\_new�=ε\_old�−EpsilonDecay
 
-EnvPars.EpsilonDecay=0.95/(EnvPars.T*150);%ε_new�=ε_old�−EpsilonDecay, steps to minimum=EpsilonDecay/(ε_start�−ε_min��)
+% EnvPars.EpsilonDecay=0.95/(EnvPars.T*150);%ε_new�=ε_old�−EpsilonDecay, steps to minimum=EpsilonDecay/(ε_start�−ε_min��)
+% 
+% % Epsilon decay: explore each of the 9 actions ~100 times per position
+% random_steps = 100 * EnvPars.n_actions * EnvPars.MaxStepsPerEpisode;
+% EnvPars.EpsilonDecay = 0.95 / random_steps;
 
-% Epsilon decay: explore each of the 9 actions ~100 times per position
-random_steps = 100 * EnvPars.n_actions * EnvPars.MaxStepsPerEpisode;
-EnvPars.EpsilonDecay = 0.95 / random_steps;
+% Explore for ~3000 episodes regardless of episode length.
+% 3000 covers the 1600-position grid ~twice with random starts,
+% giving the replay buffer a representative sample of the state space
+% before exploitation starts dominating.
+exploration_episodes = 3000;
+%EnvPars.EpsilonDecay = 0.95 / (exploration_episodes * EnvPars.MaxStepsPerEpisode);
 
-
+EnvPars.EpsilonDecay = 3.0 / (exploration_episodes * EnvPars.MaxStepsPerEpisode);
 
 EnvPars.ExperienceBufferLength=1e5;%set the lenght of the agent's circular buffer, too small (e.g. 1,000): the agent only remembers recent experience, forgets early exploration, Too large (e.g. 10^7): memory cost is high, and very old experiences (from when the policy was much worse) pollute the minibatch
 EnvPars.MiniBatchSize=128;
@@ -351,7 +358,9 @@ EnvPars.TargetSmoothFactor=1e-3;% this factor weights the amount of the NN coeff
 EnvPars.threshold = 0.8; %defines a reward for those actions that makes the optimum closer to the right one, only positions with >80% of peak get positive reward
 % In Parameters.mlx — Agent parameters section
 EnvPars.reward_threshold = 0.8;   % Reward E threshold
-
+% ---- ACQUISITION reward constants + episode-budget fix (local overrides,
+EnvPars.step_cost  = 0.01;  % per-step penalty: wandering/hovering strictly negative
+EnvPars.peak_bonus = 10;    % terminal bonus, paid once on reaching the peak
 
 % Definition of Observations and Actions
 % Observation: [|r|² (N values), t_x_current, t_y_current] → N+2 dimensional
@@ -401,9 +410,9 @@ EnvPars.G = G_func(n_s_grid, n_psi_grid);
 % sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_28_GHz.mat');
 % % sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_0.988_Nx_6.mat');
 % S_sim1 = load(sim1_file, 'G', 'beta');
-% assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ... %[output:group:8aa0d8d0] %[output:5997375d]
-%     'Loaded G is %dx%d but expected %dx%d.', ... %[output:5997375d]
-%     size(S_sim1.G,1), size(S_sim1.G,2), EnvPars.N, EnvPars.N); %[output:group:8aa0d8d0] %[output:5997375d]
+% assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ...
+%     'Loaded G is %dx%d but expected %dx%d.', ...
+%     size(S_sim1.G,1), size(S_sim1.G,2), EnvPars.N, EnvPars.N);
 % EnvPars.G_CST = S_sim1.beta * S_sim1.G;
 % dft_residual = norm(EnvPars.G_CST - EnvPars.G, 'fro') / norm(EnvPars.G, 'fro');
 % fprintf('Loaded CST SIM-1 G_CST. Deviation from analytic G: %.3f%%n', 100*dft_residual);
@@ -479,12 +488,15 @@ end
 %   data: {"dataType":"text","outputData":{"text":"Wireless packet type: SC\n","truncated":false}}
 %---
 %[output:4cd315df]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"36"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N_x","value":"4"}}
 %---
 %[output:18b88e21]
-%   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"16"}}
 %---
 %[output:323fdd42]
+%   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
+%---
+%[output:2bef69a2]
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_y","value":"15"}}
 %---
 %[output:9d9de7a9]
@@ -497,8 +509,11 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
 %---
 %[output:3d71e6f9]
+%   data: {"dataType":"textualVariable","outputData":{"name":"T_x","value":"40"}}
+%---
+%[output:23c1d2de]
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
 %---
-%[output:5997375d]
-%   data: {"dataType":"error","outputData":{"errorType":"runtime","text":"Error using <a href=\"matlab:matlab.lang.internal.introspective.errorDocCallback('assert')\" style=\"font-weight:bold\">assert<\/a>\nLoaded G is 16x16 but expected 36x36."}}
+%[output:5580c95d]
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"                     N: 16\n                   N_x: 4\n                   N_y: 4\n                     T: 1600\n                   T_x: 40\n                   T_y: 40\n                SNR_dB: 36.5005\n             theta_min: 1.8485\n             theta_max: 4.4347\n                    fc: 2.8000e+10\n                lambda: 0.0107\n               Ptx_dBm: 23\n               Gtx_dBi: 14\n               Grx_dBi: 8\n               txArray: [1×1 struct]\n                   cdl: [1×1 nrCDLChannel]\n          var_noise_dB: -110.9794\n                     r: 0\n                   d_x: 0.0054\n               pos_SIM: [5 5 4]\n                pos_MU: [8.1472 9.0579 1.5000]\n                   n_y: [1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4]\n                   n_x: [1 2 3 4 1 2 3 4 1 2 3 4 1 2 3 4]\n                   t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 … ] (1×1600 double)\n                   t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 … ] (1×1600 double)\n                  h_MU: 1.5000\n                L_hall: 10\n                W_hall: 10\n                 N_cal: 100\n             MU_margin: 0.5000\n           MaxEpisodes: 0\n                 psi_x: 0\n                 psi_y: 0\n    MaxStepsPerEpisode: 120\n             tolerance: 0.0393\n     StopTrainingValue: 114\n       episode_counter: 0\n           delta_moves: [9×2 double]\n             n_actions: 9\n        DiscountFactor: 0.9500\n"}}
 %---
