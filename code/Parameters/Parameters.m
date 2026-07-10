@@ -332,7 +332,7 @@ EnvPars.DiscountFactor=0.95 %[output:5580c95d]
 %[text] random steps needed = number of actions × visits per action = 144×150=21,600 steps
 %[text] Then decay of the probality of exploring should follow the relation:
 %[text] EpsilonDecay=(ε\_start − ε\_min)  / random steps  = 0.95 / 21,600,
-%[text] where ε\_start =1 is the starting point, always exploring, and ε\_min = 0.05 is when the system is exploiting and ε\_new�=ε\_old�−EpsilonDecay
+%[text] where ε\_start =1 is the starting point, always exploring, and ε\_min = 0.05 is when the system is exploiting and ε\_new=ε\_old(1−EpsilonDecay)
 
 % EnvPars.EpsilonDecay=0.95/(EnvPars.T*150);%ε_new�=ε_old�−EpsilonDecay, steps to minimum=EpsilonDecay/(ε_start�−ε_min��)
 % 
@@ -351,7 +351,7 @@ EnvPars.EpsilonDecay = 3.0 / (exploration_episodes * EnvPars.MaxStepsPerEpisode)
 
 EnvPars.ExperienceBufferLength=1e5;%set the lenght of the agent's circular buffer, too small (e.g. 1,000): the agent only remembers recent experience, forgets early exploration, Too large (e.g. 10^7): memory cost is high, and very old experiences (from when the policy was much worse) pollute the minibatch
 EnvPars.MiniBatchSize=128;
-EnvPars.TargetSmoothFactor=1e-3;% this factor weights the amount of the NN coefficients used to update the target estimation of the Q function as wtarget�←(1−τ)⋅wtarget�+τ⋅wmain�
+EnvPars.TargetSmoothFactor=1e-3;% this factor weights the amount of the NN coefficients used to update the target estimation of the Q function as wtarget←(1−τ)⋅wtarget+τ⋅wmain
 
 
 %Reward
