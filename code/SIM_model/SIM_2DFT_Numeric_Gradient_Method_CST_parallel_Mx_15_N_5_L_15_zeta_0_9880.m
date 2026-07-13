@@ -59,9 +59,61 @@ close all;
 
 %including all parent folders up to the file 'code', this makes visible all
 %files within this code
-addingPathParentFolderByName('code'); %[output:1b7a169d]
+addingPathParentFolderByName('code'); %[output:575b79b3]
 
-Parameters %[output:73309dbf] %[output:44eeed17] %[output:1c38dc4a] %[output:6b8cd335] %[output:0c285bac] %[output:726ab75d] %[output:1bcb5afe] %[output:477a7ee4] %[output:21114024] %[output:23397e9b]
+Parameters %[output:13a3f178] %[output:137d9f78] %[output:95322163] %[output:0a074d5b] %[output:943238c7] %[output:00016c94] %[output:90c22b23] %[output:221fc7c7] %[output:3d41d18c] %[output:054252fe] %[output:14322d88] %[output:11276de9]
+
+L=15
+zeta=0.988
+maxIter=600
+
+%Defining the file directory and name
+datasetDir = fullfile('..', 'Dataset');
+
+if ~exist(datasetDir, 'dir')
+    mkdir(datasetDir);
+end
+
+datasetDir = fullfile('..', 'Dataset');
+
+if ~exist(datasetDir, 'dir')
+    mkdir(datasetDir);
+end
+
+fmtNum = @(x) strrep(regexprep(regexprep(sprintf('%.4f', x), '0+$', ''), '\.$', ''), '.', '_');
+
+if isscalar(zeta)
+    zetaStr = fmtNum(zeta);
+else
+    zetaStr = sprintf('%s_to_%s', fmtNum(min(zeta)), fmtNum(max(zeta)));
+end
+
+fileName = sprintf('G_Nx_%d_L_%d_Mx_%d_Zeta_%s_CST.mat', ...
+    N_x, L, round(M_x), zetaStr);
+
+savepath = fullfile(datasetDir, fileName);
+
+resumeTraining = false;
+extraIter = 500;
+
+datasetDir = fullfile('..', 'Dataset');
+
+if ~exist(datasetDir, 'dir')
+    mkdir(datasetDir);
+end
+
+fmtNum = @(x) strrep(regexprep(regexprep(sprintf('%.4f', x), '0+$', ''), '\.$', ''), '.', '_');
+
+if isscalar(zeta)
+    zetaStr = fmtNum(zeta);
+else
+    zetaStr = sprintf('%s_to_%s', fmtNum(min(zeta)), fmtNum(max(zeta)));
+end
+
+fileName = sprintf('G_Nx_%d_L_%d_Mx_%d_Zeta_%s_CST.mat', ...
+    N_x, L, round(M_x), zetaStr);
+
+resumeFile = fullfile(datasetDir, fileName);
 
 %%
 
@@ -70,31 +122,6 @@ load t_y_x.mat
 %Interpolate the transmission coefficient t_y_x for the amplitude
 [F_amp, phase_min_meas, phase_max_meas] = build_amplitude_interpolant(t_y_x_amp_dB, t_y_x_phase_deg);
 gap_frac_hist = zeros(maxIter,1);   % fraction of trained phases outside measured CST range, per iteration
-
-% % Sanity-check plot: interpolated amplitude vs phase (degrees)
-% xi_query = linspace(0, 2*pi, 2000);
-% amp_query = F_amp(xi_query);
-% figure;
-% plot(rad2deg(xi_query), 20*log10(amp_query), '--','Color', [0.5 0.5 0.5], 'LineWidth', 1.5); hold on; grid on;
-% % Overlay raw CST samples, wrapped into [0,360) to match the query axis
-% phase_meas_wrapped = mod(t_y_x_phase_deg, 360);
-% plot(phase_meas_wrapped, t_y_x_amp_dB, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 4);
-% % Shade the unmeasured region (where F_amp is extrapolating, not interpolating)
-% pmin_deg = rad2deg(phase_min_meas);
-% pmax_deg = rad2deg(phase_max_meas);
-% yl = ylim;
-% if pmin_deg <= pmax_deg
-%     patch([pmax_deg 360 360 pmax_deg], [yl(1) yl(1) yl(2) yl(2)], [1 0.6 0.6], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
-%     patch([0 pmin_deg pmin_deg 0], [yl(1) yl(1) yl(2) yl(2)], [1 0.6 0.6], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
-% else
-%     patch([pmax_deg pmin_deg pmin_deg pmax_deg], [yl(1) yl(1) yl(2) yl(2)], [1 0.6 0.6], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
-% end
-% ylim(yl);
-% xlabel('$\angle t_{yx}$ [degree]', 'Interpreter', 'latex');
-% ylabel('$|t_{yx}|$ [dB]', 'Interpreter', 'latex');
-% legend({'Interpolant', 'CST samples', 'Unmeasured region'}, 'Interpreter', 'latex', 'Location', 'best');
-% set(gca, 'FontSize', font);
-% xlim([0 360]);
 
 
 % Evaluating target 2D-DFT matrix F in Eq. (8) as
@@ -137,13 +164,7 @@ for m=1:M%loop on the arriving atom
         W0(m,n) = (A_atom * cos_epsilon) .* (1./(2*pi*d.^2)) .* (1 - 1j*kappa.*d) .* exp(1j*kappa.*d);
     end
 end
-% %Testing
-% figure;
-% plot(abs(W0(:,3)),'LineWidth',2); grid on;
-% xlabel('$m$','Interpreter','latex');
-% ylabel('$|W0_{m,3}|$','Interpreter','latex');
-% set(gca,'FontSize',font);
-% axis([1 M 0 1.1*max(abs(W0(:,3)))]);
+
 
 %Intermediate layer
 % Wl: M x M for l=1..L-1 (between intermediate layers)
@@ -163,31 +184,17 @@ for l=1:(L-1)%loop on the layer index
     W{l}=W_matrix;
 end
  
-% %Testing
-% figure;
-% plot(abs(W{1}(:,M_y)),'LineWidth',2); grid on;
-% xlabel('$m$','Interpreter','latex');
-% ylabel('$|W1_{m,11}|$','Interpreter','latex');
-% set(gca,'FontSize',font);
-% axis([1 M 0 1.1*max(abs(W0(:,3)))]);
 
 %Output layer
 % WL: N x M (layer L -> output layer)
 WL = W0.';   % paper in [2] before Eq. (14) notes WL = W0^T under isomorphic arrangement
-% %Testing
-% figure;
-% plot(abs(WL(3,:)),'LineWidth',2); grid on;
-% xlabel('$\breve{m}$','Interpreter','latex');
-% ylabel('$|WL_{3,\breve{m}}|$','Interpreter','latex');
-% set(gca,'FontSize',font);
-% axis([1 M 0 1.1*max(abs(W0(:,3)))]);
 
 
 % -------------------- Transmission matrix --------------------
 
 %Phases are randomly initialized on each layer l of a total of L layers
 xi = cell(L,1);%phases per layer
-Upsilon = cell(L-1,1);%transmission matrix per layer
+Upsilon = cell(L,1);%transmission matrix per layer
 for l = 1:L
     xi{l} = 2*pi*rand(M,1);  % in [0,2pi)
     amp_l = F_amp(mod(xi{l}, 2*pi));
@@ -203,145 +210,208 @@ eta = eta0;  %initial learning rate
 beta = 1+0j; %initial scaling factor
 
 
-%beta_hist = zeros(maxIter,1);
-
-% ----------- Numeric gradient settings ------------------------------------
-h = 1e-5; % finite difference step in radians (try 1e-4..1e-6)
-
-G_vs_eta=cell(length(eta),1);%save the approximations given by G versus the parameter zeta
-loss_hist = cell(length(eta),1);%save the evaluation of the loss function
-
+% Save the same initial condition for every zeta value.
+% This is required to make the zeta sweep independent and therefore safe for parfor.
 xi0 = xi;
 Upsilon0 = Upsilon;
 
 numZeta = numel(zeta);
 
-G_vs_eta = zeros(1,length(zeta));
-loss_hist = zeros(length(zeta),maxIter);
-beta_hist = zeros(length(zeta),maxIter);
+% ----------- Numeric gradient settings ------------------------------------
+h = 1e-6; % finite difference step in radians (try 1e-4..1e-6)
 
-maxIter %[output:8aef133b]
+% Preallocate sliced outputs for parfor.
+G_vs_eta = cell(numZeta,1);      % approximation G for each zeta
+loss_hist = cell(numZeta,1);     % loss history for each zeta
+beta_hist = cell(numZeta,1);     % beta history for each zeta
+xi_trained      = cell(numZeta,1);
+Upsilon_trained = cell(numZeta,1);
+eta_final       = zeros(numZeta,1);
+beta_final      = complex(zeros(numZeta,1));
 
-for i_zeta=1:length(zeta)-10 %[output:group:57b9bac6]
-    disp(i_zeta/length(zeta)*100) %[output:225d3e42]
 
-    eta = eta0;  %initial learning rate
-    beta = 1+0j; %initial scaling factor
+%%
+if resumeTraining
+    if ~isfile(resumeFile)
+        error('Resume file not found: %s. Set resumeTraining = false for a fresh run.', resumeFile);
+    end
+
+    S = load(resumeFile, ...
+        'G_vs_eta', 'loss_hist', 'beta_hist', 'zeta', ...
+        'xi_trained', 'Upsilon_trained', 'eta_final', 'beta_final');
+
+    assert(isfield(S, 'xi_trained'), ...
+        'The resume file does not contain xi_trained. It was probably saved before resume support was added.');
+
+    assert(numel(S.zeta) == numel(zeta), ...
+        'The number of zeta values in the resume file does not match the current zeta.');
+
+    G_vs_eta_old = S.G_vs_eta;
+    loss_hist_old = S.loss_hist;
+    beta_hist_old = S.beta_hist;
+
+    xi_start = S.xi_trained;
+    Upsilon_start = S.Upsilon_trained;
+    eta_start = S.eta_final;
+    beta_start = S.beta_final;
+else
+    extraIter = maxIter;
+end
+%%
+% Start a parallel pool if none exists. Requires Parallel Computing Toolbox.
+if isempty(gcp('nocreate'))
+    parpool;
+end
 
 
-    for it = 1:maxIter
-        it/maxIter*100
-        % ----- Compute G = WL*Upsilon_L*W_{L-1}*...*Upsilon_1*W0  [Eq. (2)] ----- 
-        G_intermediate = eye(M,M);%initializing the intermidieate variable
-        %Computing first the intermediate terms Upsilon_l*W_{l-1}
-        for l=2:(L)
-            G_intermediate=Upsilon{l}*W{l-1}*G_intermediate;
+% parfor i_zeta = 1:numZeta
+for i_zeta = 1:numZeta
+    %100*i_zeta/numZeta
+    
+
+    % Local copies: every worker must own its xi/Upsilon because they are
+    % updated during training. This avoids cross-iteration dependencies.
+    if resumeTraining
+        xi_local = xi_start{i_zeta};
+        Upsilon_local = Upsilon_start{i_zeta};
+
+        eta_local = eta_start(i_zeta);
+        beta_local = beta_start(i_zeta);
+
+        old_loss_i = loss_hist_old{i_zeta};
+        old_beta_i = beta_hist_old{i_zeta};
+
+        nOld = numel(old_loss_i);
+
+        loss_i = [old_loss_i(:); zeros(extraIter,1)];
+        beta_i = [old_beta_i(:); complex(zeros(extraIter,1))];
+
+        it_start = nOld + 1;
+        it_end   = nOld + extraIter;
+    else
+        xi_local = xi0;
+        Upsilon_local = Upsilon0;
+
+        eta_local = eta0;
+        beta_local = 1+0j;
+
+        loss_i = zeros(maxIter,1);
+        beta_i = complex(zeros(maxIter,1));
+
+        it_start = 1;
+        it_end   = maxIter;
+    end
+
+    G_i = complex(zeros(size(F)));
+
+    for it = it_start:it_end
+        it_extra = it - it_start + 1;
+        fprintf('extra iter: %.1f, total iter: %d, zeta: %.4f, Mx: %d, L: %d, ', 100*it_extra/extraIter, it,zeta,M_x,L);
+        
+        % fprintf('Iteration %.1f %%n', 100*it/maxIter);
+
+        % ----- Compute G = WL*Upsilon_L*W_{L-1}*...*Upsilon_1*W0  [Eq. (2)] -----
+        G_intermediate = eye(M,M); % initializing the intermediate variable
+
+        % Computing first the intermediate terms Upsilon_l*W_{l-1}
+        for l = 2:L
+            G_intermediate = Upsilon_local{l}*W{l-1}*G_intermediate;
         end
-    
-        %Including the remaining terms
-        G=WL*G_intermediate*Upsilon{1}*W0;
-    
+
+        % Including the remaining terms
+        G_i = WL*G_intermediate*Upsilon_local{1}*W0;
+
         % ----- Update beta by LS -----
-        g = G(:);
+        g = G_i(:);
         f = F(:);
-        beta = (g' * g) \ (g' * f);%as follows from [Eq. (24), 1]
-        %beta = inv(g' * g) * (g' * f);%as follows from [Eq. (24), 1]
-    
+        beta_local = (g' * g) \ (g' * f); % scalar LS, faster/stabler than inv(...)*...
+
         % ----- Loss -----
-        E = beta*G - F;
+        E = beta_local*G_i - F;
         Lval = norm(E,'fro')^2;
-        loss_hist(i_zeta,it) = Lval;
-        beta_hist(i_zeta,it) = beta;
-    
-        % % stopping criteria
-        % if it > 1 && abs(loss_hist{i_zeta}(it)-loss_hist{i_zeta}(it-1))/max(1,loss_hist{i_zeta}(it-1)) < tol
-        %     loss_hist{i_zeta} = loss_hist{i_zeta}(1:it);
-        %     beta_hist = beta_hist(1:it);
+        loss_i(it) = Lval;
+        beta_i(it) = beta_local;
+
+        % Optional stopping criteria. Keep disabled to preserve your current behavior.
+        % if it > 1 && abs(loss_i(it)-loss_i(it-1))/max(1,loss_i(it-1)) < tol
+        %     loss_i = loss_i(1:it);
+        %     beta_i = beta_i(1:it);
         %     break;
         % end
-    
-        
-        % ===== Numerical gradient evaluation avoiding to compute Eq. (15) ===
-        % grads{l}(m) ≈ (L(xi+ h e_{l,m}) - L(xi)) / (h)
-        % ============================================================
+
+        % ===== Numerical gradient evaluation avoiding Eq. (15) =====
+        % grads{l}(m) approx (L(xi + h e_{l,m}) - L(xi))/h
         grads = cell(L,1);
         for l = 1:L
             grads{l} = zeros(M,1);
         end
-    
+
         for l = 1:L
-            % disp(l/L*100) %[output:4a03531a]
+            
             for m = 1:M
-    
-                %Evaluating the gradient per layer and atom
-                % --- xi plus ---
-                xi_p = xi{l}(m)+h;
+                % Evaluating the gradient per layer and atom
+                xi_p = xi_local{l}(m) + h;
                 amp_p = F_amp(mod(xi_p, 2*pi));
-                Upsilon_p=Upsilon;
-                Upsilon_p{l}(m,m)=amp_p*exp(1i*xi_p);
-    
-                % ----- Compute G = WL*Upsilon_L*W_{L-1}*...*Upsilon_1*W0  [Eq. (2)] ----- 
-                G_intermediate = eye(M,M);%initializing the intermidieate variable
-                %Computing first the intermediate terms Upsilon_l*W_{l-1}
-                for l_int=2:L
-                    G_intermediate=Upsilon_p{l_int}*W{l_int-1}*G_intermediate;
+
+                Upsilon_p = Upsilon_local;
+                Upsilon_p{l}(m,m) = amp_p*exp(1i*xi_p);
+
+                % Recompute G for the perturbed phase
+                G_intermediate = eye(M,M);
+                for l_int = 2:L
+                    G_intermediate = Upsilon_p{l_int}*W{l_int-1}*G_intermediate;
                 end
-    
-                %Including the remaining terms
-                G_p=WL*G_intermediate*Upsilon_p{1}*W0;
-                g_p=G_p(:);
-                beta_p=(g_p' * g_p) \ (g_p' * f);%as follows from [Eq. (24), 1]
-    
+
+                G_p = WL*G_intermediate*Upsilon_p{1}*W0;
+                g_p = G_p(:);
+                % beta_p = (g_p' * g_p) \ (g_p' * f);
+                beta_p = inv(g_p' * g_p) * (g_p' * f);%as follows from [Eq. (24), 1]
+
                 E_p = beta_p*G_p - F;
-                L_p = norm(E_p,'fro')^2;           
-    
-                % --- central difference ---
-                grads{l}(m) = (L_p - Lval) / (h);
-    
+                L_p = norm(E_p,'fro')^2;
+
+                % Forward finite difference, as in your original code.
+                grads{l}(m) = (L_p - Lval) / h;
             end
         end
-    
+
         % ----- Update phases xi_l <- xi_l - eta * grad -----
-        
-    
         for l = 1:L
-            for m=1:M
-                xi{l}(m) = xi{l}(m) - eta * grads{l}(m);            
-            end
-            xi{l} = mod(xi{l}, 2*pi);
+            xi_local{l} = mod(xi_local{l} - eta_local*grads{l}, 2*pi);
         end
-    
-        %Updating the new transmission matrix
+
+        % Updating the new transmission matrix
         for l = 1:L
-            amp_l = F_amp(mod(xi{l}, 2*pi));
-            Upsilon{l}=diag(amp_l .*exp(1i*xi{l}));
+            amp_l = F_amp(mod(xi_local{l}, 2*pi));
+            Upsilon_local{l} = diag(amp_l .* exp(1i*xi_local{l}));
         end
-    
-        % learning-rate schedule
-        eta = eta*zeta(i_zeta); %as follows from [Eq. (20), 1]
-        % % optional: keep your adaptive eta schedule, but usually start with fixed eta first
-        % maxGrad = 0;
-        % for l = 1:L
-        %     maxGrad = max(maxGrad, max(abs(grads{l})));
-        % end
-        % eta = eta * zeta * pi / max(1e-12, maxGrad); % as follows from Eq. (12): eta <- eta * zeta * pi / max_l, following [Eq. (20), 2]
-        
-    
-        % fprintf('it=%d, loss=%.3e, |beta|=%.3f, eta=%.3e\n', it, Lval, abs(beta), eta);
+
+        % Learning-rate schedule
+        eta_local = eta_local*zeta(i_zeta); % as follows from [Eq. (20), 1]
+
+        fprintf('Loss: %.1f \n', 10*log10(loss_i(it)));
     end
 
-    G_vs_eta(i_zeta)=G;
+    G_vs_eta{i_zeta} = G_i;
+    loss_hist{i_zeta} = loss_i;
+    beta_hist{i_zeta} = beta_i;
 
-end %[output:group:57b9bac6]
+    xi_trained{i_zeta}      = xi_local;
+    Upsilon_trained{i_zeta} = Upsilon_local;
+    eta_final(i_zeta)       = eta_local;
+    beta_final(i_zeta)      = beta_local;
+
+end
 %%
-%saving on the current folder
-% save G_vs_eta_N_4 G_vs_eta M_x M_y N_x N_y L M N loss_hist beta_hist
-% save G_vs_eta_N_16_Zeta_0_8_to_1 G_vs_eta M_x M_y N_x N_y L M N loss_hist beta_hist zeta
-%save G_vs_eta_N_16_Zeta_0_98_to_0_99_CST G_vs_eta M_x M_y N_x N_y L M N loss_hist beta_hist zeta
-%saving on the Dataset folder
-path = fullfile('..', 'Dataset', 'G_vs_eta_Nx_5_Zeta_0_98_to_0_99_CST.mat');
-save(path, 'G_vs_eta','M_x','M_y', 'N_x', 'N_y', 'L', 'M', 'N', 'loss_hist', 'beta_hist', 'zeta');
+%[text] #### Saving results
 
+save(savepath, ...
+    'G_vs_eta', 'M_x', 'M_y', 'N_x', 'N_y', 'L', 'M', 'N', ...
+    'loss_hist', 'beta_hist', 'zeta', ...
+    'xi_trained', 'Upsilon_trained', 'eta_final', 'beta_final', ...
+    '-v7.3');
+
+fprintf('Results saved to %s\n', savepath);
 %%
 % ======================= Helpers =======================
 %%
@@ -607,45 +677,42 @@ end
 %[text:image:3778]
 %   data: {"align":"baseline","height":182,"src":"data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcUAAAGNCAYAAABgymqFAAAA4WlDQ1BzUkdCAAAYlWNgYDzNAARMDgwMuXklRUHuTgoRkVEKDEggMbm4gAE3YGRg+HYNRDIwXNYNLGHlx6MWG+AsAloIpD8AsUg6mM3IAmInQdgSIHZ5SUEJkK0DYicXFIHYQBcz8BSFBDkD2T5AtkI6EjsJiZ2SWpwMZOcA2fEIv+XPZ2Cw+MLAwDwRIZY0jYFhezsDg8QdhJjKQgYG\/lYGhm2XEWKf\/cH+ZRQ7VJJaUQIS8dN3ZChILEoESzODAjQtjYHh03IGBt5IBgbhCwwMXNEQd4ABazEwoEkMJ0IAAHLYNoSjH0ezAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAgAElEQVR4nO3de1xUdd4H8M+spUQSDLCmraAyKmgqiqgloGHJzdIsV4ayzSJDptUu3vLWzUtBuraaApnWlsbg6lq2IpfSVYbyMhFjlpgOKlj5uAwD2RJmOs8fwxwZ7peZOXP5vF8vXs9h5sw5X+bZVx9\/5\/x+3yMxGAwGEBEREf4gdgFERET2gqFIRERUh6FIRERUh6FIRERUh6FIRERUh6FIRERUh6Foh5RKJeRyOfr37w+JRCL8eHt7IyYmBkuXLoVKpRK7TCIip8NQtCM6nQ4xMTFISEiAVqvFrl27YDAYYDAYUFxcDJlMhtzcXKxevRr79u0Tu1wiIqfDULQjf\/vb35CbmwupVIqcnBwEBwcL7wUHByMnJwdSqRQAEBYWJlaZREROi6FoR9LS0gAAo0ePho+PT6P3fXx8kJycDAAYM2aMTWsjInIFErZ5sx8SiQQAIJPJcObMGZGrISJyPRwp2hHTpVGtVguFQiFyNUREroehaEdef\/11YTstLQ0xMTEoLS0VsSIiItfCULQjSUlJWLJkifB7bm4uQkNDkZqaKmJVRESug\/cU7ZBKpcLMmTOh1WqF16Kjo7F9+\/YmJ+AQEZFlcKRoh8LDw3HkyJFGo8ZHH31UxKqIiJwfR4p2TqlUIiEhQfi9uLjYbP0iERFZDkeKdk4ulwtrEwHjiLGh1NRUeHt7QyKRYOnSpU0ep2G7OCIiaoyh6ADGjRvX7HsKhQKLFi2CXq8HAKxevRpKpbLRflqtVljyIZPJrFMoEZGDYyiKTKPRQCKRICMjo9l9qqurhe0hQ4YI29nZ2VAqlSguLkZxcbHw+vvvv9\/oGAEBAcIIcd68eRaonIjI+TAURXb48GEAwO7du5vdx\/ReaGgo4uLihNeDgoKwbds2BAcHIzg4GPHx8QCavsSq0+mg1Wohk8kgl8st+ScQETkNhqLIDhw4AMAYZHK5HBqNRnhPo9FALpcL6xWzsrLMPhsQEGAWkg8++KDZZ+vLz88HAKxcudLifwMRkbPg7FORaTQa5ObmYv\/+\/dDpdFCr1cJ7UqkUo0ePxsyZM9s0utNoNBg+fDgAYO\/evWaB2b9\/fwBgT1UiohbcJHYBrs506XPhwoUWOZbJiRMnhFBUKpXQarXIzMzs9DmIiJwZL586mejoaABAUVGR8NqyZcsQHR3Ne4lERK1gKDqZkSNHAgCqqqoAABkZGdBqtUhJSRGzLCIih8BQdDJDhw4FABw9ehSlpaVYvHgxlixZwi44RERtwIk2TkalUiEiIgKAcQkHAOTk5LCROBFRGzAUnZBEIhG22SuViKjtePnUCZlGiOnp6QxEIqJ2YCg6mezsbKjVaiQnJyMpKUnscoiIHAovnzoRjUaDyMhIREVFNdkUnIiIWsaRogPz9vZGamoqdDodMjIyMHz4cMhkMmzcuFHs0oiIHBJHig6qtLS00SOgkpOTsWLFCs40JSLqILZ5c1A\/\/vijsB0dHY25c+ea9TolIqL240iRiIioDu8pEhER1WEoEhER1WEoEhER1WEoiqyw5Bympnwgdhkor6jC3C17UF5RJXYpRESi4exTkRSWnMOaTw6hsOS82KUIlCoNlCoN5OHBWDBlHPx8vcQuiYjIphiKNmaPYdgQw5GIXBVD0UYcIQwbYjgSkathKFqZI4ZhQwxHInIVXLxvJc4Qhs1hOBKRs+LsUyv5ueYKyiqqxS7DKsorqlBdUyt2GUREFseRopXtKzqFZZl5rS51uPTechtV1LTyiiqMXLChxX3CgvpgRUIUhvj3tFFVRES2xXuKVhYbEojYkMA2h6M9YhgSkatgKNqII4Yjw5CIXA1D0cYcIRwZhkTkqhiKImkYjvaAYUhEro4TbYiIiOpwSQYREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdhiIREVEdPjqqzqZNmzBs2DCxyyCiOsePH0fXrl3x1FNPiV0KuRA+OgpAYGAgvv\/+e7HLIKIm8D9RZEscKQLo0aMHvv\/+e\/TtJ4OPbw\/R6rilWxfRzm3y65VrYpfA7wH8DgwGA4rUhyGRSESrgVwTQxHAwIEDoVKpkPTMPDwc\/5hodQzo3V20c5ucvvCL2CXwewC\/g2u\/\/45B\/aTo0kX8fxyQa+FEGyIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojoMRSIiojpOE4qFJedwouyi2GUQEZEDc5pQXPPJIczd8qnYZRARkQNzilAsLDmHwpLzOFF2kaNFIiLqMKcIxTWfHBK2OVokIleTkZEBiUTS6Ifaz+FD0TRKNOFokYhcTVJSErRaLaKjo4XXQkNDRazIcTl8KNYfJZpwtEhEriYgIAATJkwQfo+KihKxGsfl0KHYcJRowtEiEbmi6upqYTssLEzEShyXQ4diU6NEE44WicjV5OXlCdtBQUEiVuK4HDYUmxslmnC0SESuRq1WAwBkMhkCAgJErsYxOWwotjRKNOFokYhchUqlErY5yabjHDIUWxslmnC0SESu4osvvhC2IyMjRazEsTlkKLZllGjC0SIROQulUomYmBiztYijRo2CQqHAO++8I+x31113iVilY7tJ7AI6YveivzR6rccTKwAAl95bbutyiIisSqPR4OGHH4ZWq0V8fDyKi4sRHBwMnU6Hv\/3tb1i9erXZ\/sHBwSJV6vgccqRIROQqNBoNIiMjodVqkZ6eDqVSKYSej48PVq1aBZlMJuxffwE\/tR9DkYjITpWWliIyMhJ6vR7x8fFISkpqcr\/+\/fsL2\/UX8FP7dSoUVSoVFAoFRo0a1ajnXkxMDBQKBZRKpaVqJSJyKQqFAnq9HgAaXSJtztixY61ZktPr8D3FpUuXYvXq1ZBKpdi2bRvi4uIAGP9ls2bNGqSlpQEAjh07BrlcbplqiYhchEqlQm5uLgAgOTm5xXWHR48eFbYHDRpk9dqcWYdGitnZ2cK\/Wvbs2SMEImDsv7dp0ybhujb77xERtd\/bb78tbDd32RQwDkRMo8nQ0FD4+PhYvTZn1qFQ\/OCDD4Tt8PDwJveZO3cuAPbfIyJqL51Oh6ysLACAVCptcTZpSUmJsM1BSOd16PJpVVWVsF1aWtrksD4uLg4Gg6HjlYmgh7QbBvTuLnYZonL1v9+E34O438Hvv\/8u2rntwZEjR4Tt0aNHt7jvv\/\/9b2F76NChVqvJVXRopOjl5SVsx8fHQ6fTWawgIiJXd+LECWG7tdmk9Sczthag1LoOheLixYuFbbVajTFjxpj13SMioo47d+5cm\/bLyMgQ7idKpVI2AbeADoVicHAwMjMzIZVKAQBarRYRERFQKBQcNRIRdVJpaWmr++h0OrMBSlvuJ6ampsLb2xsSiQRLly5tcp\/6S+u8vb3bXrST6PA6RblcDrVabdY9IS0tDWPGjIFGo7FIcURErqgtI75HH33U7HJpSEhIi\/srFAosWrTIbN1jU+vItVqtMOCp3ynHVXRq8X5AQABycnKQnp5uNmqMjIzkiJGIqIP69u0rbBcVFTV6X6FQ4MyZM8Is\/4aUSiUUCoXwe3Z2NpRKJYqLi1FcXCy8\/v777zf6bEBAgDBCnDdvXgf\/AsdlkTZvSUlJOHDggBCMer0eO3futMShiYhcTv0rcFlZWcKIrrS0FHK5HEqlErt27cJtt90m7FddXQ3AeJ8xISHB7HhBQUHYtm0bgoODERwcjPj4eAAQmgPUp9PpoNVqIZPJXLLxisV6nwYHB2PTpk3C77t3725yP6VSif79+wut4BrKzs4W3q\/\/Lx0iIlcRHByM5ORk4feEhARIJBLIZDKo1WocOHAAwcHB8PDwEPZZvXo1JBIJZs+ejZSUFLP\/HgcEBJg1WXnwwQeF7Ya3u\/Lz8wEAK1eutPjf5Qgs2hC8tenAKpUKCQkJ0Gq1AIz\/Sql\/TTs7OxuTJk0S3ufjT4jIVW3atAkpKSlm9\/dSUlJw5MgR4b+NwcHBZrev4uPjUVBQgIULF7Z47Pqt4H744Qez95YtW+ayo0SgnaHo7e3d4hd1+fJlYXvkyJFm7+l0OsycORNLliyBwWAQLg+YrmlrNBrMmDEDycnJQijyQZlE5MoWLlyIyspKGAwGnDlzBgsXLmzUxi0pKUnYR6lUNttlrL76A476ayKVSiW0Wq3LjhKBdoSiRqOBXq9HXl5es5NoTNenpVIpEhMTzd7z8fHBypUrsWrVKgA32sAdPXoUOp0OTz31FORyOTZt2oSAgAAYDAaOFImIrMQ0MKk\/kWfZsmWIjo522VEi0I5QPHz4MADjJJqYmBhkZ2cL75WWliI1NRWLFi2CVCrFnj17mpxSXP+LHjNmjHC8Z555BgDMroETEZH1mK7mmdp2ZmRkQKvVIiUlRcyyRNfm3qcTJ05Eeno6Dhw4gKqqKkyaNMns\/ejoaKSkpCAxMbFNXdp9fHwQGhoKtVqNvLw8nD59uv3VExFRh5j6pB49ehSlpaVYvHgxlixZ4vJX6NocigEBAUhKSmrxESbtNWrUKKjVakRFRfFxJ0RENtS7d28Axqt18fHxkMlkeOGFF0SuSnwdfshwZ2k0GmHmqVqtFqsMIiKXVH9CjlqtRnFxMQcnsPCSjLbS6XSIjIwU7jFqtdo29fojIiLLCQ0NBQCkp6e7\/GVTE5uHok6nQ0xMDEaPHo1NmzYJvfWOHj0q7KNUKtkmjojIirKzs6FWq5GcnGzR22KOziahaOpiYwpErVaL7du3A7jR2X3t2rXQ6XRCzz5TyyIiIrIs07rw+Ph4zvpvwCah+M0330Cr1cLX1xdarRYHDhwQrl3ff\/\/9AIzXtH19fZGQkCCsVSQios7z9vZGamoqdDodMjIyMHz4cMhkMmzcuFHs0uyOTULR1KEmNDRU6NlnEhcXJ\/T4k0qlyMzMdOmFo0REllRaWgq9Xo9FixbB19cXs2fPRnJyMnJycjixpgk2mX2qVCqbfG6XyaZNmziEJyKygh9\/\/FHYjo6Oxty5c82ag5M50ZZkEBGR9YWHh8NgMIhdhsMQZUkGERGRPWIoEhER1WEoEhER1XHIe4rlFVXtes\/P18ua5RARkZNwyFB885NDUKo0Tb43csEGs99jQwLxjznTbVEWERE5OIe8fLpgyrg27\/v0xNFWrISIiJyJQ4ain68X5OGtN6+NDQlEWFBf6xdEREROwSFDEWjbaJGjRCIiag+HDcXWRoscJRIRUXs5bCgCLY8WOUokIkdVXVOL1I8PorqmtsPHKCw5Z7mCXIhDh2Jzo0WOEonIEZnCMHTBBqz55BB+7kQoLs\/Mx4SXN2Nf0SkLVuj8HHJJRn0LpoxrtDyDo0QiciTVNbVYU7fUrDOjw4bHLK+owuMbdiAsqA\/WJ07mmu02cPhQNI0WTcHYmVHiJf0VnL7wiwWra58BvbuLdm4TMf9+E34P\/A6u\/f67aOe2pfKKKryTf7TZMLzN3c0i5yksOY+RCzYgNiQQKxOiGI4tcPhQBMxHixwlEpG9Kyw5h5yvv7foyLAt9hWdwr6iU5CHB2PBlHEMxyY4RSiaRovVNbW8l0hEdqu9YThzw45Go0XPFn73uKWbsN3S\/UilSgOlSoOkqDF4euJohmM9ThGKgHG0WNZCT1QiIrH9XHMF2UWn2jw6LCw5b9V6MvKOICPvCOZPGYeFD4636rkchdOEop+vF\/+1Q0R2LTYkELEhgVCqNHjzk0MtPtwAAHYvegw\/11wxe61hoNb\/vf725vyjrYavp7sb5k8Z16YOYa7CaULRWvx7uFv8mGWXaix+TCJyHPLwYMjDg5GRdwTv5B9tNhw7cztoc\/7RZt+rH4YNL8e6OoYiEZFIkqLGIClqTKvh2BFNjRL9fL3w9MTRDMMWMBRtRFepw5DBgfjpYoXYpRCRnakfjssz8wA0nlDTGWFBfRAzIpBh2AYO3dHG1gq\/UGHwoIEo\/ELV7D4PPBALt25dGv38qVcP6PV6G1ZLRI4mKWoMLr23HCsSoixyvLCgPvjHnOl4f850JEWNYSC2AUeKbaCr1OHVV17COxnpbdpfKpUidNSoRq97eXIiEBG1zjRy7Izdix7jErUOYCi2IicnG0\/M\/Avuu28ipFJpm0Z7oaNG4dNP99mgOiKipjEQO4aXT1tQXnYOGzduwBdfHsWH2zKbHP0REZHz4EixBX7+fTniIyJyIQxFsqqJEcEoLzuH2zy9cPNNN7fpM126SKxcVeuuXTOIen5X\/w5MZ\/7999\/Rq1cv0epwRgaDAf\/9739xyy234JdfxH8AgL1hKFqB9owWj81IwD\/\/uQMAEBAgQ+JTszBv3gKRK7O9n3+uxvXr11GlrxS7FHJQFy9eFLsEp3TlypXWd6pTWHIOnu5uGOLf04oV2QeGooXdc88EeHl64bUVq\/DhtkycPVuKl5YvxdIlL+L8+XNYv36j2CXa1NBhITj0n3z87e33cNfYCNHq6NfrVtHObXL2p\/+JXYLo3wO\/AyMxv4eLP\/2EhyZF4I477mjzZ9Z8cgjVNVew\/9VZVqzMPjAULWzevAX47+Vf8EcP4\/Pw+vULwFvr38ZXX32FdzLS8dRTT8Or5wCRq7Q9T08v+P7xdtHO37On+M8nvPy7+JeqxP4e+B0Yifk9\/Pbb1XbtX1hyTmhMfqLsomijRY1Gg+HDhzd6vaCgAOHh4RY7D2efWtjVa9egu\/w\/\/FB5o12Tj7cP7ps4EQCQn58nVmlERO225pNDwvbcLZ+KVkdwcDAqKiqwZMkSs9cHDRpk0fMwFC3smuE6AOBy7RWU6W7cR+vTp69IFRERdUz9USJgHCmeKBPvHq+Pjw9iY2OF30NDQ+Hj42PRczAULez69evCds2VqzhXUYlrBgPOnz8HAPD09BSpMiKi9qk\/SjQRc7QIAD\/\/\/LOwHRVlmXZ49TEULWjt2jfh7eGOC2U3\/mVV+9tVlOv0+Cw\/HwBw7733iVUeEVGbNRwlmog9WiwsLBS2hw4davHjMxTb6OzZUqiPHQMAnPzuuxb3XThnthCMF8rO49mkRJSWarHl\/Q\/Rr1+A1WslIuqspkaJJmKOFr\/66ithe\/To0RY\/PkOxFS+\/tAyDBw3EoKABQt\/Tvz6TjF49ffHAA7E4flwj7PvQQw\/jmWdfgJeXFPePvxvD+92B+8ffDQB4758fY3Tkfaj9vX0zv4iIbK25UaKJmKPF3NxcAMYHLwQEWH6QwSUZrXj1tZV49bWVbdq3X78AvPDiUlyubXpR7LXrBpy7VImS8iqE9POzZJlE5EI2p72FN1cvx4IlKzAr+TmLH7+lUaLJ3C2f2nzdokp147F91rifCHCkaHGm2actmbN1J7K\/bvkSLBFRU0q++wZvrl5uteO3Nko0sdZoUaVSQS6Xw9vbGxKJBBKJBP3794dcLsfKlTcGKJGRkRY\/N8BQtLirv7ccil3+IEFcyJ0Y0NPXRhURkTNZsuCvGDIsxGrHb8so0cSS9xZ1Oh1iYmIQEREBrVaLbdu2wWAwwGAwYOXKlcjKyhIunQLAnXfeabFz18fLpzbi3u1meLi54Tb3W7B0qnWG\/UTk3DanvQUAiL1\/Kk4cL7LKOXYv+kuj13o8sQIAcOk964xQTYGoVqsRHx8PpVJp9r5cLsehQ4eQlpYmvGbJLjb1caRoYVevXRO2u\/xBAreuxidDdLv5ZkhvdUcXifhPPyAix2O6bLr6zbfFLsXiTIEok8mwcWPT\/aH79u0rbEdHR1utFo4UW1F2qabN+16sqsbMjdsxoNcfETviTkQMkkH\/cy0eXrsVHm7dkLNUYcVKichZVekr8denH8WCJSsQNHgoCg5+LnZJFpOamgq1Wg0AWLlyZZs61EyYMMFq9TAULehWNzdseHIaBvTqIbzm4dYNPaWeuKivRvbX3yFuxGARKyQiR7R18wYAwJ\/ljS9tOjKdToc33ngDACCTySCXy5vdt6joxuXiIUOGWK0mXj61IA+3bmaBaJIYeRcA4NDJM7YuiYgc3FfHvkT6hjVIWZcBL6m32OVY1M6dO4X13wsWtPy8WdNoEgDGjBljtZoYijYQMUgGACg4qcXFqmqRqyEiR1Glr8Si55Mwe858jBx1d7P73Bc+zMaVWca7774rbN91113N7qfT6aDVagFYpwl4fQxFG\/Bw64a4EOP04YPfaUWuhogcRc7ej1F2\/izSN6zBQD8P4ce0TvHN1csxelgflJ0\/K3Kl7afT6cxGf8HBwc3um1\/XOxoARo0aZdW6GIo2Ejvc+Myv9w4cFrkSInIU8hlP4vvyy41+FiwxLpFYsGSF8JqjOXnypLDd2mzSjz\/+WNgeN26c1WoCONHGTA9pNwzobZ2ncg\/oPQipe7xQXlGFS79UICyor1XO01mW\/vvd3bpY9HhE5BwuXLjQpv00Gg2ysrKE3y39UOGGOFK0obiQQABAVuFxkSshIhJXWVlZm\/ZbtGiRsC2VSlu8zGqydOlSoU1campqo\/dTU1OF9xs2CuBI0YbmTxmHjLwj2Fd0CuVTquDn6yV2SUTkgC5frjb7v5Y0NeUDnCj7vybfG\/DMm2a\/jw3qg3\/Mmd6h8\/j7+7e6T2pqKs6cOQOZTAatVtumR0WlpqZi9erVwu+LFi3CtGnThCdqLF261Oz9hiNPjhRtyNPdDfLwYFTX1CK76JTY5RCRA9qc9hbSN6wBAGR+8C6U27Za9PgrEqJQXVNr9mPS8HV5WOujtub07t1b2D569Gij95VKJRYtWoRdu3YJM0\/r02g0iImJgU6nM3tt0aJF2Lt3LyoqKiCVSgEYl36Yjrl69Wqkp6dj7969TY48GYo2NjawDwDgnfzG\/yMgImrNrOTnhMk1x06UQz7jSYsef4h\/Twzx79nqfmFBfRBbd0uoI8LDw4XQ0uv1UCiMHb90Oh1SU1ORkJCAzMxMs9AyBaBKpUJkZKRZIALGoN27dy\/i4uLg4+OD5ORkAMaF\/xqNBgqFApmZmUhKSkJcXBwqKysb1cVQtDF5eDD8fI0TbsorqsQuh4iokfWJD7S6z9MTO7+AftOmTcJ2WloaJBIJfH198cYbbyAzM1PocGMKT7VaDYlEgoiICERFRSEnJ8dszaKPjw\/i4uKE38PCwoTPPfXUU0hOTm6xaw7AUBSFacLNm+14RAsRka20Nlrs7CjRRC6XY+\/evZDJjA1OpFIpkpOToVarzcJrz549wj6hoaHIzMyEUqlsdRG\/qfONVquFj48PVq1a1WpNnGgjgvoTbpAodjVERI2tT3wAE17e3OR7lhglmsTFxZmN7poSHh6OM2fa3ybTx8dHmKQzderUNn2GI0UReLq7wc\/XC9U1tVCqNGKXQ0TUSHOjRUuNEm1BqVQKk3Q0mrb9t5ahKJIFU4xdGTjhhojsVVP3Fi05SrQmlUqFhIQEYbJNXl5emz7HUBSJ6V9aJ8oucsINEdmlhqNFRxklajQaTJ48GSkpKZg\/fz4A433F0tJSAMZZrA0X7ZswFEViWrMIcLRIRPar\/mjRnkeJCoUCCoUCGo0GkZGRGD16NBYuXIiAgABhks6aNcb1ncuXL8fatWubPA5DUURPTzR2Z+B9RSKyV6bRor2PEo8dO4a0tDQMHz4cMpkM27dvF96Lj48HcGPZh1KpNHtsVX0MRREN8e\/JCTdEZPfWJz5g16NEAMKEmvj4+EbrF1944QWEhoYCAGQyGQ4cONBsD1UuyRDZginjMHfLHuz7+pRwOdUZ3eHrZrUnkDgKV\/\/7AX4HJmJ+D92uu7f7M23tciOmprrTmPj4+ODYsWNtOg5HiiIzXY7YV3SKE26IiETGUBRZ\/Qk3bBJORCQuhqIdiA8bBgBYw7ZvRESiYijagbCgvsKEm8KSc2KXQ0TkshiKdsLUJDyr8LjIlRARuS6Gop2YX9f2bV\/RKbOHehIRke0wFO2EacIN1ywSEYmHoWhHxgb2AcC2b0REYmEo2hF5eDD8fL1QXlHFNYtERCJgKNoZ04SbN7k8g4jI5hiKdqb+hBsiIrIthqKd8XR3Y5NwIiKRMBTt0IK60WJWIUORiMiWGIp2yNQkvLDkPCfcEBHZEEPRDtVvEs7lGUREtsNQtFNPTxwNALyvSERkQwxFOzXEvycn3BAR2RhD0Y6ZRov7vubyDCIiW7hJ7ALsySX9FZy+8Ito5x\/Qu7vZ7\/LwYCzPzMO+olMor6iCn6+X1Wuw9N9fU3vNoscjIrImhqIdM024Uao0yC46haSoMVY\/5x+9uln0eM89+1dMnzYFgwcPtuhxiYisgZdP7VzsCOPyjDVs+0ZEZHUMRTsXGxIoTLg5UXZR7HKIiJwaQ9EBmJqEc80iEZF1MRQdQP0m4dU1tSJXQ0TkvBiKDsDT3Q1hQX24ZpGIyMoYig4iPoxt34iIrI2h6CBME27KK6rYJJyIyEoYig7C091NmHDzpgjLM97fuhlSj66NfoiInAlD0YEIbd+KbN\/2beaTs1D8zSnce1+U8NqIkJE2r4OIyJoYig7Ez9dL1Cbhffr2w\/h7IoXfJ0yYaPMaiIisiaHoYBbULc\/IKhRnFmp1VbWwPebuu0WpgYjIWhiKDia27r5iYcl5USbc7N+fL2wPHBhk8\/MTEVkTG4I7mPpNwjNVGix8cLxNz\/910VcAgH79AtCnb782f+5\/v\/6Oql+uWqusVnl1v1m0c5uY\/v7\/Vl0RrYaGT2KxNTGfQmMi9ncAiPs9\/PhTjWjndgQcKTog04SbzTZes3j4y0JhO2RkqE3PTURkCwxFBzTEv6coE26OHT0sbIdH2HaESkRkCwxFByUsz\/jasssz\/rVzB6ZNvd9sLeKE8Xdj\/vNz8N6WzcJ+oaOs\/2xHIiJbYyg6KHm4se3bvqJTFplwo9Fo0L9\/fyQ+MQNeXl4o+EIN\/eXfUHr+J0yYMBFb3s3A2bOlwgf6IbYAACAASURBVP5Dhg7r9DmJiOwNQ9FBmSbcAEB2JxfzazQaREZGQqvVYt3fN+Ld97YJoSf19sGyl19Dv34Bwv71F\/ATETkThqIDix1hXJ6xphNt30pLSxEZGQm9Xg+5XI6ZT85qcr8AWX9hu\/4CfiIiZ8JQdGCmJuHVNbUdvoSqUCig1+sBAKtWrWrTZ0aNvqtD5yIisncMRQfXmSbhKpUKubm5AIDk5GQEBAQ0u+9X6mPCdmAgF+0TkXNiKDq4+XVt3\/YVnUJ1TW27Prtx40ZhOykpqdn9zp87i6oq42hyRMhISL19OlApEZH9Yyg6OE93N4QF9UF1TW27np6h0+mgVCoBAFKpFMHBwc3u+\/33JcI2m4AbqVQqSCQSscsgF3Fwfx5eWfo87gsfhoF+Hhjo54GHJo3Hwf15YpfmdBiKTiA+zBho7bmEeuTIEWF79OjRLe6buy9b2B5855A2n+P8ubP429o1ZiPSluTn7cP85+dgwvi7hTWS\/fxux1NPzEB+3r42n7c5paWlSEhIQExMTKv7mkKvuZ+IiIhO10PUFpvT3sKsxx8GALz30R58X34Zmf\/Kw8\/Vesx6\/GHs3bNT5AqdC0PRCcSGBMLT3Q3lFVVtnnDz7bffCtv33ntvi\/vu2rlD2B4ZOqrVY+srdZj\/\/BwMHxoIlaqgTfX087sd0x+egl07d2D1G2uENZIvzF+IXTt3YPrDU7Dy1ZfadKym6lEoFJDJZMLomMiReHp64ZVV6+Dn3xcAMHLU3Vj+2hoAwJaMDSJW5nwYik6g\/prFto4Wz54926b93t+6Wbif6OUlbbEJuL5Shw1\/X4uQ4MHY8m5Gm45vYjrHp9n5uOvuMADGNZJznp2HxKeM9zvXrnmjXcesX09aWlq7PmuSmpoKg8HQ7A+Rtc1Kfg7HTpQ3er27hwcA4Odqva1LcmoMRSchtH1r433F0tLSVvfRV+rw6svLhN\/vva\/l+4n33hOG97Zsxtp1G6C\/\/BtGhIxsUy0mD0+b3mSnnD59+7brOE3VYzAYEBrKJubkPC7+9AMAIHx8y1d6qH346Cgn4efrBT9fL5RXVEGp0ggjx+a0tPzCZFbi4xgZOgqff2a8mR88fESL+6esWYfQ0NHC7FTvdsxS1V\/+rdn3NMVfA4BZV522aFiPjw9nzZJzqNJXYkvGBnh6eiEx6Vmxy3EqHCk6kQV1yzOyClt\/cka\/fjcugxYVFTV6f\/7zc1CqPYOk5Gea\/Py\/du7A\/OfnmL02MSrW4ss1\/rVzB3bt3AEvLyk+2L6j9Q9YuR4iMZWXncPePTsx7YF7IJV641\/ZBcJ9RrIMhqITia1byF9Ycr7VCTdRUTf6lyqVSmECyvlzZ\/HUEzOwa+cOfLB9Bzw8bhP2q66qBmC8z5j4xAxLly84f+4s8vP2YdrU+5H4xAwkPpWE\/xQcFqUJ+eeff46YmBizmacJCQlQqVQ2r4Vc2+a0t3Bv2FA8\/8wTqK7Sw+M2T1z6v5\/ELsvpMBSdSHuahAcHByM5OVn4PSEhARKJBMOHBqLoKzU+zc7HkKHD0L27h7DP2jVvQOrRFc8\/+wxeW\/k61qyz\/Ky3aVPvx\/ChgZj+8BR8\/lke+vULwJChw3Dbbbe1\/mELCg8PR0FBAZYtW4acnBwYDAZUVFQgPT0dSqUSERERWLp0qU1rItc2K\/k5fF9+GUePn8crq9eh8NDnSHgoimsVLYyh6GRME27a0iR806ZNSE1NhVQqBQDIZDK8tvJ1fP6fQmFUNmToMKz7+0Z4eRn3eXjadOzLO4A5z86zSv07d\/9bWI6xY9cnCJD1x\/PPPoOQ4ME48c1xq5yzOeHh4QgPDxd+9\/HxQVJSEtLT0wEAq1ev5oiRbM5L6o1Jk6ch\/T3j7YT5cxNFrsi5cKJNPT2k3TCgd3exy+iUIf492zXhZsGCBViwYEGL+zw3V4Hn5iraXctNXTre8UXq7YOJUbGYGBWLaVPvx+ef5eGBuIko0nwn+n3CadOmYfbs2QCAjz76yCw4iWxl5Ki7AQDV1VUo+e4bBA0eKnJFzoEjRSdkGi1+ceq8yJVYhmmyT1WVHgf2fy5yNeazWNuytIXI2m6td5uDOoeh6IRMo0OlStPhR0rZk\/qTfX74ofEiZiJnljhjKh6aNL7R6+Vl5wAA\/n36cQaqBTEUnVB7JtzYA32lDoe\/LMT5c6132QkaNNgGFbVMp9MJ21OnThWxEnIVJ44X4ZWlz6NKXwkAKPnuGzyb\/Dg8Pb3w9jvbRa7OuTAUnVTsCOPyjLZMuBHbqVMliI2KxLwG6x5NPsszPvOxX78ATIyKNXvv8JeFQvNwS5JIJOjfv3+T7+Xn5wMwPl1k2rRpFj0vUUMLlryG2XPm43hxEUYP64OBfh54bHochg0Pwb+yC3gv0cIYik4qNiQQfr5eqK6ptfkl1NLSUiiVSuEBxidPnkRWVib0lboWP\/f5Z3mY\/\/wcYcRo6l26ds0bHVq8b3L+3FmzenJzc5GRkWE24muKVqtFQkKCcN\/Q9LgthUIBqVSKAwcOsEsOWV3Q4KF4YeHL+Nfeg\/i+\/DK+L7+MYyfKzRqEk+UwFJ1YXN1i\/vY8UqozUlNTIZFIIJPJkJCQYPbeqy8vQ0CfXpB6dMXq11Pw36orwk\/XW30xe858RIy\/D\/n5eRg+NBBSj64I6NML+fmfY8GSFcg7VIzb\/QLNPvffqiuo+uWqcI6G761+PQVSj64YPjSwUT2zZ8+Gr68vJBIJUlNTG\/0te\/fuRXJyMvR6PWQyGSQSCXx9fbF27VokJydDrVa3+AzKppjqIiL7xSUZTmz+lHHIyDtibBJug6VMCxcuxMKFC81ei42NRU5ODrZ8uBsR99zX5Of8\/PvihYUvd+icp0+dBADMnjO\/0Xuzkp\/DrOTnAKDdS23i4uIQFxfXoZqIyHFxpOjEPN3dEBbUB9U1tVCqWu+H6miq9JV4N\/0tDBkWgidnNX0\/koioPRiKTi4+zHiJ7538oyJXYnmFBfsRPv5ebN22G15Sb7HLISInwMunTi42JBCemW44UXYR5RVV8PP1Erski5k0eRomTebsTyKyHI4UnVz9NYu2mnBDROSoGIouwNT2bZ8DLOQnIhITQ9EF+Pl6CWsWnXHCDRGRpfCeootYMGUc5m7Zg6zC1p+cYQ13+Lo5\/BNIOsvV\/36A34GJmN9Dt+vuop3bEXCk6CJi6xbyF5acd4om4URE1sBQdBGO1iSciEgMDEUXEh82DIBjNAknIhIDQ9GFhAX1FSbccCYqEVFjDEUXYxot7vuaoUhE1BBD0cUkRY0BAChVGk64ISJqgKHoYjjhhoioeQxFFxQ7wrg8gxNuiIjMMRRdUGxIoDDhhpdQiYhuYCi6qLi6xfxsEk5EdAND0UXNnzIOAJuEExHVx1B0UZ7ubmwSTkTUAEPRhS2oGy2+k39U5EqIiOwDQ9GFxYYEwtPdDSfKLnLCDRERGIouzdPdTXh6BkeLREQMRZdnuoTK+4pERAxFl+fn68UJN0REdRiKJIwW2SSciFzdTWIXYE8u6a\/g9IVfRDv\/gN7dRTlvbEggsMW4ZrHgxA\/o6eVpsWPX1F6z2LGIiKyNI0UyaxJ+8DutyNUQEYmHoUgAbjxn8b0Dh0WuhIhIPAxFAgCEBfWFn68XLtdeQdHZcrHLISISBUORBKYm4fuKT4pcCRGROBiKJDA1CS\/47gwuVlWLXA0Rke0xFEng6e6GuJA7cbn2CifcEJFLYiiSmRF9ewMAdhwuFrkSIiLbYyiSmbgRg9FT6omL+mpeQiUil8NQpEbGD5IBALYcOCJyJUREtsVQpEaeiLwLgHHCDRGRK2EoUiMebt3QU+qJy7VXkP31d2KXQ0RkMwxFalJi3Whxx5dfi1wJEZHtMBSpSRF19xVP\/3SJE26IyGXwKRnUJA+3bogLuRPZRd9ix5fFmBs7vlPH+7Gi1iWfQFKfmH+\/idjfA78DIzG\/hx9\/qhHt3I6AI0Vq1vS7hgMAsou+FbkSIiLbYChSswb06sEJN0TkUhiK1CLThJtDJ7k8g4icH0ORWmSacFNwUssJN0Tk9BiK1CLThBsAbBJORE6PodhJq3bnYf2+g079YN7Y4YMAAO8dOCxyJURE1sUlGZ00om9vrPpXLrK+KAJgvNw4om9vxIXcCQ+3biJXZxkh\/fyEJuFFZ8sR0s9P7JKIiKyCodhJpntuJgUntSg4qcX6fQcR0q83BvTqgfCgAIcPkvGDZMj6ogj7ik86\/N9CRNQcXj7tpPr33BoqOnsBWV8UYc7WnQhbvg4vfrTHYZc21G8Sfrn2isjVEBFZB0PRAkz33FpTfPaCw15SNYX\/5dorXMxPZGNV+krs3bMTzylmYtQQPwz088BAPw88p5iJr459KXZ5ToWhaAGme24t8XDrhqUPRTe63OpIRvTtDQDYcbhY5EqIXMu8OYl4\/pkn4CWVIr9Ag+\/LL+O11\/+O7E93IeGhKAajBTEULWR8K2E3N+4ehw5EAIgbMViYcMM1i0S2FTH+Pryyah28pN4AAPmMJ\/HIX54CAHz68Q4xS3MqDEULMd1za8qAXj0QN2KwDauxHlP4bzlwRORKiFzHlm27sWXb7kav\/6l3HwBA+flzNq7IeTEULcTDrRtC+vVu8r3TP13CnK3\/tHFF1lF\/wg0R2Qe\/Pn3FLsFpMBQtKHaE+SzU+LEheF\/xKDzcuqHo7AXM3LRdpMrazr+He5M\/Jh5u3dgknMhO7Pu3cfT4wIPTRa7EeTAULShikEyYXRoXcieeiLwLA3r1wIYnp8HDrRtO\/3QJMzdtd\/glDaYm4fu+5ixUIrEc3J+HE8eLMHvOfIwcdbfY5TgNhqIFebh1Q8Tg\/hjQqwfmxo4XAnJArx7457xEDOjVQwjG0z9dErnajjNNGCo6e4ETbohEUF52DvPnJiJi\/H14YeHLYpfjVNjRpp6rV6+itvbXTh1jSsgg9PQcjZtx3exYNwNY88gkzNv2Kc78XwX+unUn1s54AP1v9xX2+fXXLp06NwB069a5dZDXDdebfL3h3xIdHIhczSl8VKCGYuLYZo937fq1TtVDROaq9JV4Nvlx+PUJwNoNW8Qux+kwFAGoVCoAwEuLn8VLi5+1+vm8Yp7ALz374elN21C9\/yNcvXjOYsdWq9UWO1Z9oaGhZr\/f5N0T0skK7FQdRbriQauck4jMVekr8eSMqQCArdt2C8szyHIYirgxuuratSu6dOn8aK01Vw4qIQl\/GDf9aSC8Yp7Erwe249qlMosc+w9\/aNsV8erqanz22WfYv38\/vv32W\/z888\/Ce3fffTcmTJiA++67D56exqYEt9xyi\/kBfq3G9f9V4w+3euK2wWNw9ezxJs\/z22+\/4do1jhaJLOGtNStQfr4U\/8ouYCBaCUMRwPHjTf8H3dqWZ+YhI+8Ibol8FOsTJ0MeHmyT82ZkZGDx4sXQ6\/VNvv\/ll1+ipKQEK1euFF6rqalptJ9SpcHcLXvw4OwX8I85Tc9+i42NRU5OjmUKJ3Jhym1b8dEH72JP7hfw8+8rdjlOixNtRLQiIQpJUWMAAHO37EFGnvUXxCsUCsyePRt6vR4ymQzp6enQarUwGAzCT3FxMQ4cONDqsWJDAgEA+4pOobyiytqlE7ms8rJzWPvGy1iwZAWCBg9t9N5zipniFOaEOFIU2YqEKHjc0g1rPjmE5Zl5qK6pxcIHx1vlXAqFAmlpaQCA5ORkbNq0qcn9goPbNmL1dHeDPDwYSpUG2UWnhIAnIsvakvF3VFdX4XDhQRwuPGj23vFiNYYND23mk9ReDEU7sPDB8QgL6oOpKR9izSeHcEFXjfWJky16joyMjDYFYnvFjgiEUqXBmk8OMRSJrOSjD94FABQc\/EzkSpwfQ9FOhAX1xe5Fj2FqyodQqjQor6jC7kV\/scixdTodFi9eDACQyWQWC0TAeAnVz9cL5RVVOFF2EUP8e1rs2ERk9H35ZbFLcBm8p2hHwoL6Yv+rswAAhSXnMTXlA4scd+fOncKkmvqTZywlru7e4jv5Ry1+bCIiW2Io2pkh\/j2x\/9VZ8HR3Q2HJeUx4eTOqa2o7dcx3331X2E5ISIBEImnxp73mTxkHwDjhprO1EhGJiaFoh4b494T6zTkY4t8TJ8ouYsLLmzs8u1On07VrQX90dHS7z+Hp7obYkEBU19RCqdK0+\/NERPaCoWinPN3dsHvRYxji3xPlFVWY8PJmnCi72O7jnDx5UtiOj483W3rR1E9H1xTGjuAlVCJyfAxFO2YKxrCgPqiuqcXUlA\/bHYwXLlwQtkNCQixdoqD+hBuuWSQiR8VQtHPGYPyLcHlywsubUVhyrs2fLyuzTPu41ni6uwkTbt785JBNzklEZGkMRQfxjznThTZwpmUbbTF27I0nWJw7d84apQnqT7ghInJEDEUHsj5xcrvbwt1xxx3CtlKphE6ns1p9nu5u8PP14oQbInJYXLzvYNrbFi4gIADR0dHIzc2FXq9HTEwMXn31VcTFxQn7aDQa\/PDDDygvL0dSUlKn6lswZRzmbtmDrEKNWYPzO3zdMKB3904d29G5+t8P8DswEfN76HbdXbRzOwKOFB3QwgfHC0+lWPPJIczdsqfF\/bdv3y48D1GtVmPSpElm6xKHDx+OSZMmCV1vOsPUJLyw5Dwn3BCRw2EoOqjYkEDsXvQYAOMjnFrqfuPj44OcnBykpKQ0elhwaGgokpOTkZmZidOnT3e6LlOTcADI5CVUInIwEoPBYBC7COo40+J+AAgL6mOxfqmdYarJ090N\/Uv3IycnB\/v27UNMTIzYpRG5vLKyMvTp0wf+\/v44f\/682OXYHd5TdHCmtnBTUz4U2sLtXvQYPN3dbHL+a9cN+M+3Whz4RovTP+nwf9W\/4KL+Mnp4dsel6l+gu6WHTeogIrIEhqITMAXj4xv+KYzSPl70GPx8vax2zi9PnUdG\/lHka07j6u\/XGr0\/Y9wIbDv0NS53vc1qNRARWRrvKToJP18vi7SFa03ByXN47O9ZmPLGB8j+qqTJQASAsUF9AAC6W3qgS3frhTMRkSVxpOhETG3hZm7YUffoqQ+FoLSENZ8cQurHBxu9PtjvdtxzZwDCB\/VFT6\/u6OnlAd\/bbsWh785CqdKgq\/8gi5yfiMjaGIpOxtQWbmrKB2b3GMOC+nb4mBU\/\/w\/Pbv0U+Rrz2amPRAxHUtQYDOrd9H3D2BGBUKo0uHV4ZIfPTURkS7x86qR2L\/pLh9rCNfS\/2t\/w+IYdZoEYNXwAVKuS8daTDzQbiIBx2UjXa1cg6eqGiv9d6dD5iYhsiaHoxDrSFq4+A4DHN+zAsTM3nrSxaOo92PasHAPv8G3TMaRXKgEAu7\/9sV3nJiISA0PRya1IiBIadS\/PzGvynmBznt\/6KQ59d1b4fd0TD2De5Ih2nb\/nZeNTOoou6Nv1OSIiMTAUXcDCB8djfeJkAM1PlmloX9EpfFRQLPy+6pFoPDpueLvPfZPhGq5ePIv\/Xb3GJuFEZPcYii5CHh4stIVb88mhFtvC\/X7tOl7d8Znw+6PjhmPWxNEdPnftGWO48jmLRGTvGIouJCyorxCMxiUbTQfj9kNfo\/T\/jPcCfW+7FS9Nv69T571SdhK33twF5RVVbBJORHbNoUOxtLQUS5cuRUxMjNlTHyQSCUaNGgW5XI6MjAyrPkPQ0YQF9cX+V2fB091NWLJRXVNrtk\/WF8eF7XmTIyC99ZZOndPwWy3C+xkn5nC0SET2zGFDUalUIjQ0FKtXr8bUqVNRUVEBg8GAiooKpKenQ61WIysrC7Nnzxa7VLtjagvn5+uFE2UXMTXlQyEYv9JegLputulNXf6A6WOHWeSc0QNvB2C8V0lEZK8cMhRLS0uhUCig1+uRkpKCpKQk+Pj4ADA+JikpKQkpKSkAjI9GMr1HN\/j5emH\/q7MwxL8nTpRdROiCDThRdhFfnioT9pk+dhg8bulmkfP53toNfr5eqK6p5YQbIrJbDhmK+fn50OuNU\/zHjh3b5D6JiYkAgKioKJvV5WhMbeGG+PdEdU0tpqZ8iC9O3XiUzEhZb4ueb0Hd0pCsQoYiEdknhwzF6upqYfvChQtN7uPj4wODwYBVq1bZqiyH5Onuhv2vzkJYUB9U19Tis+NnhPcG9\/6jRc8VGxIIwDjJhxNuiMgeOWQoenp6CtsKhQIaDUcenVW\/LRwAeHd3x2C\/2y16Dk93N+Ec2by3SER2yCFDcdq0aZDJZAAAvV6PyMhIZGRktPgZlUrVaIaqSqWyRbkOo35buMpfavDBf4osfo6n69Y7ruEsVCKyQw4Zij4+Pti1a5dZMM6ePRsxMTHNjhrDw8Oh1WoRGhpqy1IdTmfawrXFEP+enHBDRHbLIUMRAIKDg3HkyBEsWbJEeC03NxeRkZFQKpVNfiYgIAB\/\/vOfbVWiw+pIW7j2MI0W60\/qISKyBw4bioBxxLhq1SoUFBSYjRoTEhJ4abST2tMWriPHBgClSsMJN0RkVxw6FE3Cw8Nx5MgRs0ujb7\/9togVOYe2toVrL064ISJ75RShCBhHjVlZWcLv9bfbKzs7W2gf5+3tbdY6Ljs7u9H+DSfwSCQSxMTEtLpPU6NZlUoFuVxudl65XN7kvqmpqU2eU6PRQC6XN1tLe7SlLVxHxI4wLs\/ghBsisidOE4qA8Z6h6TJqR\/Xv3x+TJk1CXl4eli1bhsrKSlRUVCA5ORlqtRqTJk1qFFANJ\/DEx8dj+\/btze4jlUpRUFCA8PBws30UCgUiIozPK1Sr1TAYDCgoKEBeXh4iIiIa3StduHAhCgoKIJVKhdeUSiWGDx\/eqX8UNNRSW7iOig0JFCbc8BIqEdkLhwpF0wiqJZWVxqc7dHSWqVarBQCsW7dOCC0fHx+sWLFC2Oejjz4y+0xAQABeffVV4feQkJBGreUCAgKE7jqvv\/56o0DMyMhAWloaZDIZlEolAgICABgvDb\/44osAjKHZsLl5eHg4Ro82Tlw5evQoFAoFCgoKhEC1lObawnVGXN1ifjYJJyJ74VChmJeXB71e3+wkGpVKJbR\/qx9S7VFQUNDkKM7HxwfR0dEAjL1XG4qLixNGqUVFTa\/vy8rKglQqxbRp08xe1+l0WLx4MQBg5cqVjT5nOq9er0d+fn6ztev1euzZs0eoPTw8HAaDATk5Oc1+pj2aagvXmWA0Lf1gk3AishcOE4oajUYIvMmTJ0OpVAqjJp1OB6VSicmTjcsI0tPTERcX16HzhIeHNwrEtnr66acBGMOv4YguOzsbWq0WL774YqNR5JEjR4S\/rXfvxv1Gg4NvdJopKytr9L5JaGhoh2tvq4Zt4Sa8vBmFJec6fCzTcbhmkYjsgcOEYu\/evZGZmYnk5GSMHj0aCoUCvr6+kEgk8PX1xdq1ayGXy6HVapGUlCRKjfVHgA1HdOvXr2+0j8mJEyeE7YiIiCYn5Zjs37+\/2fPb8mkg9dvCTU35sMOjvfgw4zHeyT9qsdqIiDrqJrELaCsfHx\/I5XLI5XKbnC87OxuFhYX46quvcObMGeFeY0sCAgIQGhoKtVothDRgvNyam5uL5ORk4V5hcwwGg0Xqt4X1iZPh6e6GjLwjeHzDDqxPnGzWP7UtYkMC4ZnphhNlF1FeUQU\/Xy8rVUtE1DqHGSnaSnZ2Nvr3748ZM2bA398fy5Ytw5EjR2AwGIR7ey2ZN28eAOPsUdO9xzVr1gAA5s+f3+rnm7pfac\/qt4Wbu2UPMvKOtOvz9dcscsINEYnNYUaKtqBSqTBp0iRIpVKcPn26Q5cjJ06cKGzn5+dj2rRpUCqViI6ObnaUWP+pHyUlJa2OJu3NwgfHAzCuOVyemYfqmlrhNZMfK2px+sIvTX4+auidyMg7gr3qEsyJnmCVGgf07m6V47ZHc3+\/LYn9PfA7MBLze\/jxpxrRzu0IOFKsx9QFRyaTNQpEnU6Ho0dbv+\/l4+OD5ORkAMCbb76JnTt3Qq\/XY9myZc1+pn6Qmu49NqTT6ZpckmEvFj44vsNt4Xp6eaKn1BOXa68g++vvzN67XHsFF6uqm\/kkEZFlMRTrMa2BVKvVZo+iys7ObldXmPvvvx+Acc3j4sWLIZPJWpwVGhAQIFyazc3NhVwuFy6jmmbWjhkzBmlpaThypPnLk2IHZmfawiVG3gUA2Pf1twCAi1XV2LL\/S8zZuhNbDrTvkiwRUUe5VCiWlpaarSH84osvzILkkUceEbZnz54tzPycNGkSRo0aJSyiz83NbbLdm0n9NYt6vb7JtYcNbd++XWg4kJWVBZlMJsysTUhIQGVlJYqLixstNVGpVMIIVq1Wt1iXLTRsC3fSd3ibPhcxqG6N59kLmLlpO2Zu3I6tBw7j9E+X4OHWzZolExEJXCoUZTKZWfuzRYsW4dFHHxV+Dw8Px969exu1bNu7dy82bdpkdqxJkyYhNTW12XPFx8cL52zLjFkfHx\/k5OQgJSXF7PwymQxLlizB6dOnzdYrAsZAjIiIENY4tqUuWxji3xO7Fz0GT3c31NzkDulkBX79\/Vqz+xedLcd7Bw4L4Xf6p0u4XHtFeP\/Wbl2tXjMREQBIDI60BsCBKJVKJCQkICUlBQsXLhS7HFFU19QiOOlVYzDe0hXrnvgzBvTqAcB4r7DgpBY7vvwap3+61OJxlj4UjbgRgztVi6tPrjAR+3vgd2Ak6kSbHy7gnrsGwd\/fH+fP85mmDXH2qZUsW7YMUqkUiYmJYpciGk93NwzQfYOvbu4DvXdPzNm6ExuenCYEY8zIANwz1K\/V4\/zJ2xMebm5tPm\/ZJc6uI6KOcanLp7aSkZHRbEs3V3OT4Rr0ezYhQHorLtdewZytO1F0thwebt3Q19cbt7Th0ujNN3WxQaVERAxFi6j\/zEKVSiXMOHXlUWJDT4cEIGKQTAjGgpNaXDMYcFO9FnbN6SLh\/0ypscQZU\/HVsS\/FLoOcDP9rYyG5ubmQSCTC8xB37drl8qPEht54ZDLix4YAd\/P+cgAABcRJREFUAF78aA9+qNSbTaj5Wn0UD9wzFl+rzdeD3tzlxkjx+HENXn5pGcLGjoFbty5w69YFgwcNxNq1b9rmjyCb2pz2Fgb6eTT5U3DwM7HLsynltq0YNaT12w3UObynaAEymUzojRofH4\/Fixc3milKRnNjx+PWbl2x9cBh1Fy5CgCo1uux8W+p2LHtH432rx+IhV+ocG\/keIwcGYq09HcwbFgwzp4txdy5z2Dpkhdx\/vw5rF+\/0WZ\/C9lOxPj7mny9x+29bFyJ7ZV89w3eXP2Sy\/0jQCwMRQs4c+aM2CU4lO711h2qDnyOJc\/\/FXdHjMdtnp74udq8e02XLo0vZpgCEQD69QvA+\/\/Yhj\/16oF3MtLx8iuvAbjFqvWT7W3ZtlvsEkSxOe0tvLNxLcLG3St2KS6DoUg2lfVFEdbvOwgAuFB2Hh+9vwUf7clBb\/8+UDz+CL449B\/cdsuNmaZ\/qHfLMWxsOGqvNF7v6ON94zL1z9XV6HIrQ5Ec3949O3H5cjXyCzTwknoj+9NdYpfkEhiKZDP1AxEAevv3waZ\/fNRov+vXr6NvD2+UV+jNLp825+xZY0u8gAAZ+vUL4JIMcgqTJk\/DpMmNn79K1sVQJJvQ1\/6GHUXFbdr3lyu\/oYvkD\/DzleLXuvuOLVm3bi0A4G\/r3upUjUREDEWyCalbV+x64UkUnS3H6Z\/+C1VJyw9t\/qX2CqS3usPtppubfF9XqcOxo0ewceMGaM9o8fmBgwgb23zTdXJsryx9Hns\/2Ynq6ip4enph0pRpeG7+cnhJvcUujZwMQ5FsKqSfH0L6+SF+bAj8e7jjcm0tan67ip9rfjXbr\/KXGkhvdW\/yGKZZqCYTo6Lww4UfrFo3iWNg4GBEjL8PDzw4Ha+sWocqfSX+qfwAb65ejuPFRdi6bTeDkSyK6xRJVB5ubrj9Ng8M6NkDbl2N3W3cbr4ZV69dw9VrTTcRN024qb1yDR9\/8ikqdZX4y2OP4OWXmn9mJTmm8ROisGXbbowcdTcAwEvqjVnJzyHugYdx4ngRcvZ+LHKF5GwYimQ3TKsvenh2R9Adt7fpMzExcdjz72xIpVKkpLyO48c1VqyQ7MXEGOMzS\/NzPhW5EnI2DEWyW22ZeQoYl2SEjhoFADh6lA8kdgU9e\/1J7BLISTEUyancdpun2CWQDVz8yXgP2YP\/\/yYLYyiSw1i79k24desCXaWu0XvaM8bZrKPqRozk+L469iUG+nlg756djd47dqQQwI3LqESWwlAku3D2bCnUx44BAE5+912L+06+P05YsG\/qfVpaqsUHH36Efv0CrF4r2dYrS54XnoZRpa\/E5rS38NEH7+KRvzzlMovbD+7PE7ZLvvtGxEqcH0ORRPXyS8sweNBADAoaAL1eDwD46zPJ6NXTFw88EGs2ceahhx7G2xvT4O3jjUFBA+DWrYvxc5WV+PzAQUyfHi\/Wn0FWIOsfiNde\/zuGDQ\/F7CemY6CfB0YP64N9\/96NdRvfwyur1oldotUlzpiKUUP8MOvxh4XXJkePxX3hw5A4Y6qIlTkvicFgMIhdBDmv2NhY5OTkYMuHuxFxj\/mTDvx7NL0OsbOaavM2oHd3q5yrPU5f+EXsEkT\/HvgdGIn5Pfz4wwXcc9cg+Pv74\/z586LVYa84UiQiIqrDUCQiIqrDUCQiIqrDUCQiIqrDhuAkGj73kIjsDUeKREREdRiKREREdbhOkaxq8ODBOHnyJIYNHwlvb1\/R6rj1FvHvFPzv19\/FLkH070H070AC3OpmB\/9bqBXve6itrcXhwoPo3r07Ll++LFod9oqhSFb1xz\/+ERUVFWKXQUQN3HTTTbh69arYZdgd8f\/JRE7thx9+wOrVq9mom8iOHDt2DMOGDRO7DLvEkSIREVEdTrQhIiKqw1AkIiKqw1AkIiKqw1AkIiKqw1AkIiKqw1AkIiKqw1AkIiKqw1AkIiKqw1AkIiKqw1AkIiKq8\/8q1YIvHMVkZAAAAABJRU5ErkJggg==","width":208}
 %---
-%[output:1b7a169d]
+%[output:575b79b3]
 %   data: {"dataType":"text","outputData":{"text":"Adding matlab path to: D:\\code\\SIM\\code\n","truncated":false}}
 %---
-%[output:73309dbf]
+%[output:13a3f178]
 %   data: {"dataType":"textualVariable","outputData":{"name":"total_iteration","value":"1"}}
 %---
-%[output:44eeed17]
+%[output:137d9f78]
 %   data: {"dataType":"text","outputData":{"text":"Wireless packet type: SC\n","truncated":false}}
 %---
-%[output:1c38dc4a]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"16"}}
+%[output:95322163]
+%   data: {"dataType":"textualVariable","outputData":{"name":"N_x","value":"5"}}
 %---
-%[output:6b8cd335]
+%[output:0a074d5b]
+%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"25"}}
+%---
+%[output:943238c7]
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
 %---
-%[output:0c285bac]
+%[output:00016c94]
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_y","value":"15"}}
 %---
-%[output:726ab75d]
-%   data: {"dataType":"matrix","outputData":{"columns":20,"name":"zeta","rows":1,"type":"double","value":[["0.9800","0.9810","0.9820","0.9830","0.9840","0.9850","0.9860","0.9870","0.9880","0.9890","0.9900","0.9910","0.9920","0.9930","0.9940","0.9950","0.9960","0.9970","0.9980","0.9990"]]}}
+%[output:90c22b23]
+%   data: {"dataType":"textualVariable","outputData":{"name":"zeta","value":"0.9800"}}
 %---
-%[output:1bcb5afe]
+%[output:221fc7c7]
 %   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0038"}}
 %---
-%[output:477a7ee4]
+%[output:3d41d18c]
 %   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
 %---
-%[output:21114024]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T","value":"144"}}
+%[output:054252fe]
+%   data: {"dataType":"textualVariable","outputData":{"name":"T_x","value":"50"}}
 %---
-%[output:23397e9b]
+%[output:14322d88]
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
 %---
-%[output:8aef133b]
-%   data: {"dataType":"textualVariable","outputData":{"name":"maxIter","value":"40"}}
-%---
-%[output:225d3e42]
-%   data: {"dataType":"text","outputData":{"text":"     5\n\n","truncated":false}}
-%---
-%[output:4a03531a]
-%   data: {"dataType":"text","outputData":{"text":"    7.6923\n\n   15.3846\n\n   23.0769\n\n   30.7692\n\n   38.4615\n\n   46.1538\n\n   53.8462\n\n   61.5385\n\n   69.2308\n\n   76.9231\n\n   84.6154\n\n   92.3077\n\n   100\n\n    7.6923\n\n   15.3846\n\n   23.0769\n\n   30.7692\n\n   38.4615\n\n   46.1538\n\n   53.8462\n\n   61.5385\n\n   69.2308\n\n   76.9231\n\n   84.6154\n\n   92.3077\n\n   100\n\n","truncated":false}}
+%[output:11276de9]
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"                     N: 25\n                   N_x: 5\n                   N_y: 5\n                     T: 2500\n                   T_x: 50\n                   T_y: 50\n                SNR_dB: 36.5005\n             theta_min: 1.8485\n             theta_max: 4.4347\n                    fc: 2.8000e+10\n                lambda: 0.0107\n               Ptx_dBm: 23\n               Gtx_dBi: 14\n               Grx_dBi: 8\n               txArray: [1×1 struct]\n                   cdl: [1×1 nrCDLChannel]\n          var_noise_dB: -110.9794\n                     r: 0\n                   d_x: 0.0054\n               pos_SIM: [5 5 4]\n                pos_MU: [1.0626 8.8378 1.5000]\n                   n_y: [1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5]\n                   n_x: [1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5]\n                   t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 … ] (1×2500 double)\n                   t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 … ] (1×2500 double)\n                  h_MU: 1.5000\n                L_hall: 10\n                W_hall: 10\n                 N_cal: 100\n             MU_margin: 0.5000\n           MaxEpisodes: 5000\n                 psi_x: 0\n                 psi_y: 0\n    MaxStepsPerEpisode: 150\n             tolerance: 0.0251\n     StopTrainingValue: 142.5000\n       episode_counter: 0\n           delta_moves: [9×2 double]\n             n_actions: 9\n        DiscountFactor: 0.9500\n"}}
 %---

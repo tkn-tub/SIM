@@ -52,7 +52,7 @@ M   = M_x * M_y;
 % EnvPars.U_func = EnvPars.U_func_CST;
 
 Calibration;
-EnvPars.MaxEpisodes = EnvPars.N_cal * 100;
+EnvPars.MaxEpisodes = EnvPars.N_cal * 200;
 
 % -------------------------------------------------------------------------
 % Observation override: aligned coherent Re/Im observation

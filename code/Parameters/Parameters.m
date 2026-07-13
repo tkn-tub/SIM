@@ -65,7 +65,7 @@ kappa=waveform_k;
 N_x_vector=2:5;%SIM dimension of the zero Layer
 N_y_vector=N_x_vector;
 N_vector=N_x_vector.*N_y_vector;
-N_x=4 %as follows from [1, Sec. IV A] for the (4x4 grid) %[output:4cd315df]
+N_x=5 %as follows from [1, Sec. IV A] for the (4x4 grid) %[output:4cd315df]
 % N_x=2 %as follows from [1, Sec. IV A] for the (2x2 grid)
 N_y=N_x; %to account for a balanced error in the x an y axes
 N=N_x.*N_y %[output:18b88e21]
@@ -76,7 +76,8 @@ M=225;%as follows from [1, Sec. IV A] for the (4x4 grid)
 M_x=sqrt(M)  %[output:323fdd42]
 M_y=M_x %[output:2bef69a2]
 %number of intermediate SIM layers
-L=13; %as follows from [1, Sec. IV A] for the (4x4 grid)
+% L = 13; %as follows from [1, Sec. IV A] for the (4x4 grid)
+L = 10;
 % L=7;%as follows from [1, Sec. IV A] for the (2x2 grid)
 %distance between atoms
 d_x=lambda/2;
@@ -120,12 +121,12 @@ Grx = 10^(Grx_dBi/20);                  % convert to amplitude factor
 %[text] #### Gradient Descent Algorithm 
 maxIter = 500; %number of gradient descent iterations
 eta0 = 1; % initial learning rate, as follows from the value in first paragraph, Section VI.B
-% zeta_ini=0.98;
+% zeta_ini=0.985;
 % zeta_delta=0.001;
-% zeta_end=1-zeta_delta;
-zeta_ini=0.985;
+% zeta_end=0.99;
+zeta_ini=0.980;
 zeta_delta=0.001;
-zeta_end=0.99;
+zeta_end=0.980;
 % zeta = 0.1:0.1:(1-0.1); %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration
 zeta = zeta_ini:zeta_delta:zeta_end %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration %[output:9d9de7a9]
 tol = 1e-8; %tolerance of the approximation
@@ -167,7 +168,7 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:6a191799]
 % T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 % T=T_x.*T_y
 %Fixing parameters
-T_x=40 %[output:3d71e6f9]
+T_x=50 %[output:3d71e6f9]
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
 T_x_vector=35:40;
@@ -407,7 +408,7 @@ EnvPars.G = G_func(n_s_grid, n_psi_grid);
 
 % ---- Trained CST-realistic SIM-1 G (separate from analytic EnvPars.G) ----
 
-% sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_28_GHz.mat');
+% sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_Nx_4_28_GHz.mat');
 % % sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_0.988_Nx_6.mat');
 % S_sim1 = load(sim1_file, 'G', 'beta');
 % assert(isequal(size(S_sim1.G), [EnvPars.N, EnvPars.N]), ...
@@ -488,10 +489,10 @@ end
 %   data: {"dataType":"text","outputData":{"text":"Wireless packet type: SC\n","truncated":false}}
 %---
 %[output:4cd315df]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N_x","value":"4"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N_x","value":"5"}}
 %---
 %[output:18b88e21]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"16"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"25"}}
 %---
 %[output:323fdd42]
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
@@ -509,11 +510,11 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
 %---
 %[output:3d71e6f9]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T_x","value":"40"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"T_x","value":"50"}}
 %---
 %[output:23c1d2de]
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
 %---
 %[output:5580c95d]
-%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"                     N: 16\n                   N_x: 4\n                   N_y: 4\n                     T: 1600\n                   T_x: 40\n                   T_y: 40\n                SNR_dB: 36.5005\n             theta_min: 1.8485\n             theta_max: 4.4347\n                    fc: 2.8000e+10\n                lambda: 0.0107\n               Ptx_dBm: 23\n               Gtx_dBi: 14\n               Grx_dBi: 8\n               txArray: [1×1 struct]\n                   cdl: [1×1 nrCDLChannel]\n          var_noise_dB: -110.9794\n                     r: 0\n                   d_x: 0.0054\n               pos_SIM: [5 5 4]\n                pos_MU: [8.1472 9.0579 1.5000]\n                   n_y: [1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4]\n                   n_x: [1 2 3 4 1 2 3 4 1 2 3 4 1 2 3 4]\n                   t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 … ] (1×1600 double)\n                   t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 … ] (1×1600 double)\n                  h_MU: 1.5000\n                L_hall: 10\n                W_hall: 10\n                 N_cal: 100\n             MU_margin: 0.5000\n           MaxEpisodes: 0\n                 psi_x: 0\n                 psi_y: 0\n    MaxStepsPerEpisode: 120\n             tolerance: 0.0393\n     StopTrainingValue: 114\n       episode_counter: 0\n           delta_moves: [9×2 double]\n             n_actions: 9\n        DiscountFactor: 0.9500\n"}}
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"                     N: 25\n                   N_x: 5\n                   N_y: 5\n                     T: 2500\n                   T_x: 50\n                   T_y: 50\n                SNR_dB: 36.5005\n             theta_min: 1.8485\n             theta_max: 4.4347\n                    fc: 2.8000e+10\n                lambda: 0.0107\n               Ptx_dBm: 23\n               Gtx_dBi: 14\n               Grx_dBi: 8\n               txArray: [1×1 struct]\n                   cdl: [1×1 nrCDLChannel]\n          var_noise_dB: -110.9794\n                     r: 0\n                   d_x: 0.0054\n               pos_SIM: [5 5 4]\n                pos_MU: [5.4689 9.8596 1.5000]\n                   n_y: [1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5]\n                   n_x: [1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5]\n                   t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 … ] (1×2500 double)\n                   t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 … ] (1×2500 double)\n                  h_MU: 1.5000\n                L_hall: 10\n                W_hall: 10\n                 N_cal: 100\n             MU_margin: 0.5000\n           MaxEpisodes: 5000\n                 psi_x: 0\n                 psi_y: 0\n    MaxStepsPerEpisode: 150\n             tolerance: 0.0251\n     StopTrainingValue: 142.5000\n       episode_counter: 0\n           delta_moves: [9×2 double]\n             n_actions: 9\n        DiscountFactor: 0.9500\n"}}
 %---

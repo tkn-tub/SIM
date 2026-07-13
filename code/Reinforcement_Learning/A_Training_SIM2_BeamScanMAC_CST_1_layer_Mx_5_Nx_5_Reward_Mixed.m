@@ -47,12 +47,50 @@ M_x = 5;
 M_y = M_x;
 M   = M_x * M_y;
 
+%Definition of the FFT precision
+N_x=5
+N_y=N_x;
+N=N_x*N_y;
+
+EnvPars.N_x=N_x;
+EnvPars.N_y=N_y;
+EnvPars.N=N;
+
+% Meta-atom indexing — store inside EnvPars so closures don't depend on workspace
+n = 1:EnvPars.N;
+EnvPars.n_y = ceil(n ./ EnvPars.N_x);
+EnvPars.n_x = n - (EnvPars.n_y - 1) .* EnvPars.N_x;
+
+% Environment variables
+n = (1:EnvPars.N);
+n_y = ceil(n ./ EnvPars.N_x);
+n_x = n - (n_y - 1) .* EnvPars.N_x;
+n_psi = n;
+n_psi_y = ceil(n_psi ./ EnvPars.N_x);
+n_psi_x = n_psi - (n_y - 1) .* EnvPars.N_x;
+
+%Recalculating the FFT
+%Analytic FFT
+% Kernel 2D-DFT == TO BE REPLACED BY SIM 1
+G_func = @(n,n_psi) exp(-1i*2*pi*(n_psi_x(n_psi)-1)/EnvPars.N_x.*(n_x(n)-1)).* ...
+    exp(-1i*2*pi*(n_psi_y(n_psi)-1)/EnvPars.N_y.*(n_y(n)-1));
+[n_psi_grid, n_s_grid] = ndgrid(1:EnvPars.N, 1:EnvPars.N);
+EnvPars.G = G_func(n_s_grid, n_psi_grid);
+
+% Reclaculating the Upsilon matrix
+EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
+    -2*pi*(EnvPars.n_x(n_)-1) .* (EnvPars.t_x(t_n_)-1) / (EnvPars.N_x*EnvPars.T_x) ...
+    -2*pi*(EnvPars.n_y(n_)-1) .* (EnvPars.t_y(t_n_)-1) / (EnvPars.N_y*EnvPars.T_y) ));
+
+
 % Optional CST SIM1 front-end. Keep commented unless those fields exist.
 % EnvPars.G      = EnvPars.G_CST;
 % EnvPars.U_func = EnvPars.U_func_CST;
 
 Calibration;
-EnvPars.MaxEpisodes = EnvPars.N_cal * 100;
+
+
+EnvPars.MaxEpisodes = EnvPars.N_cal * 15;
 
 % -------------------------------------------------------------------------
 % Observation override: aligned coherent Re/Im observation
@@ -191,7 +229,7 @@ statePath = [
 criticNet = dlnetwork(layerGraph(statePath));
 
 % Interface check before constructing/training the RL agent.
-[obs0, logged0] = resetFunction_nav_CST_Aligned(EnvPars); %#ok<ASGLU>
+[obs0, logged0] = resetFunction_nav_CST_Aligned(EnvPars);
 assert(isequal(size(obs0), [numObs, 1]), ...
     'Reset observation is %dx%d but expected %dx1.', size(obs0,1), size(obs0,2), numObs);
 
