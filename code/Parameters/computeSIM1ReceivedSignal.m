@@ -1,37 +1,57 @@
-function [r, r_signal] = computeSIM1ReceivedSignal(t_psi, h, SNR_dB, EnvPars)
-%COMPUTESIM1RECEIVEDSIGNAL Implements Eq. (5):
+function [r, r_signal] = computeSIM1ReceivedSignal(t_psi, h, snr_dB, EnvPars)
+%COMPUTESIM1RECEIVEDSIGNAL Evaluate the noisy SIM-1 received vector.
 %
-% r = sqrt(SNR) * G * Upsilon0 * h + u
+%   r = sqrt(SNR) * G * Upsilon0 * h + u
 %
-% h is assumed to satisfy mean(abs(h).^2) = 1.
-% u ~ CN(0,I).
+% where:
+%   h ~ channel/steering vector
+%   u ~ CN(0,I)
+%
+% Inputs:
+%   t_psi  : scalar snapshot index
+%   h      : N-by-1 complex channel vector
+%   snr_dB : scalar SNR in dB
+%   EnvPars: simulation parameter structure
+%
+% Outputs:
+%   r_signal : noiseless received vector
+%   r        : noisy received vector
 
-    arguments
-        t_psi (1,1) double {mustBeInteger, mustBePositive}
-        h (:,1) double
-        snr_dB (1,1) double
-        EnvPars struct
-    end
+    %% Basic input checks
+    validateattributes(t_psi, {'numeric'}, ...
+        {'scalar', 'integer', 'positive', '<=', EnvPars.T}, ...
+        mfilename, 't_psi');
+
+    validateattributes(snr_dB, {'numeric'}, ...
+        {'scalar', 'real', 'finite'}, ...
+        mfilename, 'snr_dB');
+
+    % Guarantee a column vector
+    h = h(:);
 
     assert(numel(h) == EnvPars.N, ...
-        'Channel vector h must contain EnvPars.N elements.');
+        'computeSIM1ReceivedSignal:InvalidChannelSize', ...
+        'The channel h has %d elements, but EnvPars.N = %d.', ...
+        numel(h), EnvPars.N);
 
+    
+    %% Input-layer coefficients
     v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
 
-    % Preserve the convention used during training.
-    % Verify separately whether the conjugation introduced by v0'
-    % is intended in your phase convention.
+    % Preserve the conjugate-transpose convention used by your current code
     Upsilon0 = diag(v0');
 
-    SNR_linear = 10.^(SNR_dB/10);
+    %% Noiseless received vector
+    snr_linear = db2pow(snr_dB);
 
-    r_signal = sqrt(SNR_linear) * ...
-        EnvPars.G * Upsilon0 * h;
+    r_signal = sqrt(snr_linear) * ...
+               EnvPars.G * Upsilon0 * h;
 
-    % Unit-variance circular complex Gaussian noise:
+    %% Unit-power circular complex Gaussian noise
     % E{|u_n|^2} = 1
-    u = (randn(EnvPars.N,1) + ...
-         1i*randn(EnvPars.N,1)) / sqrt(2);
+    u = (randn(EnvPars.N, 1) + ...
+         1i*randn(EnvPars.N, 1)) / sqrt(2);
 
+    %% Noisy observation
     r = r_signal + u;
 end

@@ -128,7 +128,7 @@ zeta_ini=0.980;
 zeta_delta=0.001;
 zeta_end=0.980;
 % zeta = 0.1:0.1:(1-0.1); %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration
-zeta = zeta_ini:zeta_delta:zeta_end %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration %[output:9d9de7a9]
+zeta = zeta_ini:zeta_delta:zeta_end %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration %[output:6088ac05]
 tol = 1e-8; %tolerance of the approximation
 seed=1;
 
@@ -159,8 +159,8 @@ txElem  = phased.CosineAntennaElement('FrequencyRange',[fc-5e9 fc+5e9], ...
 txArray = phased.ULA('NumElements',4,'Element',txElem,'ElementSpacing',lambda/2);
 
 %[text] #### Localization protocol parameters
-T_coh=sqrt(9/(16*pi))*physconst('LightSpeed')*MU_speed/fc %[output:37649b12]
-N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:6a191799]
+T_coh=sqrt(9/(16*pi))*physconst('LightSpeed')*MU_speed/fc %[output:38d6f3e6]
+N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:1d0ad6ac]
 %T=1024;%see [1, Sec. VI.C.]
 %T_x=ceil(sqrt(T_coh/T_loc))
 % T_x=1:ceil(sqrt(T_coh/T_PPDU_loc));
@@ -168,7 +168,7 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:6a191799]
 % T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 % T=T_x.*T_y
 %Fixing parameters
-T_x=50 %[output:3d71e6f9]
+T_x=50 %[output:7c3c3c33]
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
 T_x_vector=35:40;
@@ -212,39 +212,78 @@ cdlInfo = cdl.info;
 cdl.TransmitArrayOrientation = [cdlInfo.AnglesAoD(1) cdlInfo.AnglesZoD(1)-90 0]';
 cdl.ReceiveArrayOrientation = [cdlInfo.AnglesAoA(1) cdlInfo.AnglesZoA(1)-90 0]';
 
+%% Channel model used during evaluation
+
+% Options:
+%   'LoS' : LoS steering vector plus AWGN
+%   'Rician_LoS_NLoS' : Rician LoS + clustered NLoS channel
+EnvPars.channelModel = 'rician_los';
+% EnvPars.channelModel = 'rician_los_nlos';
+
+% A fixed value is useful initially for debugging.
+EnvPars.KR_dB = 40;%Rician Factor
+
+%25 NLoS clusters and 20 rays per cluster
+EnvPars.Nc   = 8;
+EnvPars.Mray = 10;
+
+% Cluster powers.
+% Leave empty to use the temporary exponentially decaying profile below.
+% For the final paper, replace this with Pc from your 38.901 realization.
+EnvPars.Pc = [];
+
+% Temporary cluster-power decay factor
+EnvPars.clusterPowerDecay = 1.5;
+
+% Temporary angular-spread parameters
+% These are Monte-Carlo sensitivity parameters, not yet exact 38.901 values.
+EnvPars.clusterThetaSpread_deg = 2;
+EnvPars.clusterPhiSpread_deg   = 2;
+EnvPars.rayThetaSpread_deg     = 0.25;
+EnvPars.rayPhiSpread_deg       = 0.25;
+
+% Approximate cosine element-pattern amplitude
+EnvPars.elementCosinePower = 0;
+
+% For controlled-SNR Fig. 11, normalize every channel realization
+% so mean(abs(h).^2) = 1.
+EnvPars.normalizeH = true;
+
+%% Additional NLoS power multiplier for diagnostic tests
+%
+% 1     : use the complete nominal NLoS component
+% 0.1   : use 10% of its nominal power
+% 0.01  : use 1% of its nominal power
+% 0     : completely remove the NLoS component
+
+EnvPars.nlosPowerScale = 0;
+
 % figure; displayChannel(cdl,'LinkEnd','Tx');
 % view(0,90)
 % figure; displayChannel(cdl,'LinkEnd','Rx'); title('SIM Rx array');
 % view(0,90)
 %[text] #### Noise parameters; see \[3\]
-%% Noise power in dBm
+% Noise and interference parameters
+noiseFigure = 7;                             % dB see [10, Tab. 6-1]
+thermalNoiseDensity = -174;                  % dBm/Hz [11, Tab. 5, entry (14)]
+%Interference noise
+rxInterfDensity = -165.7;                    % dBm/Hz
+rxInterfDensity = -Inf;                    % no interference noise
 
-noiseFigure           = 7;       % dB
-thermalNoiseDensity    = -174;    % dBm/Hz
-rxInterfDensity        = -Inf;    % dBm/Hz, no interference
+% Calculate the corresponding noise power
+% Receiver thermal noise density including noise figure
+rxNoiseDensity = thermalNoiseDensity + noiseFigure;   % dBm/Hz
 
-% Receiver thermal-noise density including noise figure
-rxNoiseDensity_dBmHz = thermalNoiseDensity + noiseFigure;
+% Sum noise and interference in linear mW/Hz
+totalNoiseDensity_dBHz = 10*log10(10^((rxNoiseDensity-30)/10) + 10^((rxInterfDensity-30)/10));
 
-% Add thermal noise and interference in linear mW/Hz
-noiseDensity_mWHz = ...
-    10.^(rxNoiseDensity_dBmHz/10) + ...
-    10.^(rxInterfDensity/10);
-
-% Integrated receiver noise power
-noisePower_dBm = 10*log10(noiseDensity_mWHz) + 10*log10(BW);
-
-fprintf('Receiver noise power = %.2f dBm\n', noisePower_dBm);
-
-EnvPars.noisePower_dBm = noisePower_dBm;
-
-SNR_dB_vector = -10:5:40;
+% Total noise power over bandwidth BW
+noisePower_dB = totalNoiseDensity_dBHz + 10*log10(BW);
 
 %[text] #### SNR evaluation
-% %Free path loss in the direct link IRS-MU
-% Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
-% SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:23c1d2de]
-SNR_dB = 20;       % dB, default value only
+%Free path loss in the direct link IRS-MU
+Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
+SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:23c1d2de]
 
 %[text] #### Agent parameters
 %Environment related parameters
@@ -265,8 +304,7 @@ EnvPars.Gtx_dBi = evalin('base','Gtx_dBi');
 EnvPars.Grx_dBi = evalin('base','Grx_dBi');
 EnvPars.txArray.NumElements = evalin('base','txArray.NumElements');
 EnvPars.cdl = evalin('base','cdl');
-% EnvPars.var_noise_dB = evalin('base','noisePower_dB');
-EnvPars.noisePower_dBm = noisePower_dBm;
+EnvPars.var_noise_dB = evalin('base','noisePower_dB');
 EnvPars.r = 0;
 
 EnvPars.d_x = evalin('base','d_x');
@@ -508,21 +546,21 @@ end
 %[output:2bef69a2]
 %   data: {"dataType":"textualVariable","outputData":{"name":"M_y","value":"15"}}
 %---
-%[output:9d9de7a9]
-%   data: {"dataType":"matrix","outputData":{"columns":6,"name":"zeta","rows":1,"type":"double","value":[["0.9850","0.9860","0.9870","0.9880","0.9890","0.9900"]]}}
+%[output:6088ac05]
+%   data: {"dataType":"textualVariable","outputData":{"name":"zeta","value":"0.9800"}}
 %---
-%[output:37649b12]
+%[output:38d6f3e6]
 %   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0038"}}
 %---
-%[output:6a191799]
+%[output:1d0ad6ac]
 %   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
 %---
-%[output:3d71e6f9]
+%[output:7c3c3c33]
 %   data: {"dataType":"textualVariable","outputData":{"name":"T_x","value":"50"}}
 %---
 %[output:23c1d2de]
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
 %---
 %[output:5580c95d]
-%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"                     N: 25\n                   N_x: 5\n                   N_y: 5\n                     T: 2500\n                   T_x: 50\n                   T_y: 50\n                SNR_dB: 36.5005\n             theta_min: 1.8485\n             theta_max: 4.4347\n                    fc: 2.8000e+10\n                lambda: 0.0107\n               Ptx_dBm: 23\n               Gtx_dBi: 14\n               Grx_dBi: 8\n               txArray: [1×1 struct]\n                   cdl: [1×1 nrCDLChannel]\n          var_noise_dB: -110.9794\n                     r: 0\n                   d_x: 0.0054\n               pos_SIM: [5 5 4]\n                pos_MU: [5.4689 9.8596 1.5000]\n                   n_y: [1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5]\n                   n_x: [1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5]\n                   t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 … ] (1×2500 double)\n                   t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 … ] (1×2500 double)\n                  h_MU: 1.5000\n                L_hall: 10\n                W_hall: 10\n                 N_cal: 100\n             MU_margin: 0.5000\n           MaxEpisodes: 5000\n                 psi_x: 0\n                 psi_y: 0\n    MaxStepsPerEpisode: 150\n             tolerance: 0.0251\n     StopTrainingValue: 142.5000\n       episode_counter: 0\n           delta_moves: [9×2 double]\n             n_actions: 9\n        DiscountFactor: 0.9500\n"}}
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"                         N: 25\n                       N_x: 5\n                       N_y: 5\n                         T: 2500\n                       T_x: 50\n                       T_y: 50\n                    SNR_dB: 36.5005\n                 theta_min: 1.8485\n                 theta_max: 4.4347\n                        fc: 2.8000e+10\n                    lambda: 0.0107\n                   Ptx_dBm: 23\n                   Gtx_dBi: 14\n                   Grx_dBi: 8\n                   txArray: [1×1 struct]\n                       cdl: [1×1 nrCDLChannel]\n              var_noise_dB: -110.9794\n                         r: 0\n                       d_x: 0.0054\n                   pos_SIM: [5 5 4]\n                    pos_MU: [1.3317 1.7339 1.5000]\n                       n_y: [1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5]\n                       n_x: [1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5]\n                       t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 … ] (1×2500 double)\n                       t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 … ] (1×2500 double)\n                      h_MU: 1.5000\n                    L_hall: 10\n                    W_hall: 10\n                     N_cal: 100\n                 MU_margin: 0.5000\n               MaxEpisodes: 5000\n                     psi_x: 0\n                     psi_y: 0\n        MaxStepsPerEpisode: 150\n                 tolerance: 0.0251\n         StopTrainingValue: 142.5000\n           episode_counter: 0\n               delta_moves: [9×2 double]\n                 n_actions: 9\n            DiscountFactor: 0.9500\n              EpsilonDecay: 6.6667e-06\n    ExperienceBufferLength: 100000\n             MiniBatchSize: 128\n        TargetSmoothFactor: 1.0000e-03\n                 threshold: 0.8000\n          reward_threshold: 0.8000\n                 step_cost: 0.0100\n                peak_bonus: 10\n                    U_func: @(n_,t_n_)exp(1i*(-2*pi*(EnvPars.n_x(n_)-1).*(EnvPars.t_x(t_n_)-1)\/(EnvPars.N_x*EnvPars.T_x)-2*pi*(EnvPars.n_y(n_)-1).*(EnvPars.t_y(t_n_)-1)\/(EnvPars.N_y*EnvPars.T_y)))\n                     F_amp: [1×1 griddedInterpolant]\n            phase_min_meas: 0.1501\n            phase_max_meas: 6.1982\n                U_func_CST: @(n_,t_n_)U_func_cst(n_,t_n_,EnvPars)\n                         G: [25×25 double]\n                  peak_map: [100×50×50 double]\n                 psi_x_cal: [100×1 double]\n                 psi_y_cal: [100×1 double]\n                   pos_cal: [100×3 double]\n            global_max_cal: [100×1 double]\n               best_tx_cal: [100×1 double]\n               best_ty_cal: [100×1 double]\n              channelModel: 'rician_los'\n                     KR_dB: 40\n                        Nc: 8\n                      Mray: 10\n                        Pc: []\n         clusterPowerDecay: 1.5000\n    clusterThetaSpread_deg: 2\n      clusterPhiSpread_deg: 2\n        rayThetaSpread_deg: 0.2500\n          rayPhiSpread_deg: 0.2500\n        elementCosinePower: 0\n                normalizeH: 1\n            nlosPowerScale: 0\n"}}
 %---

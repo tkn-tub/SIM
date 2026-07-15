@@ -22,8 +22,10 @@ pos_cal        = zeros(N_cal, 3);
 global_max_cal = zeros(N_cal, 1);
 best_tx_cal    = zeros(N_cal, 1);
 best_ty_cal    = zeros(N_cal, 1);
+% One N-element channel vector per calibration position
+h_cal = complex(zeros(EnvPars.N, N_cal));
 
-for pos = 1:N_cal %[output:group:1a57dc51]
+for pos = 1:N_cal
     pos_MU_k       = [X_cal(pos); Y_cal(pos); EnvPars.h_MU];
     pos_cal(pos,:) = pos_MU_k';
 
@@ -31,22 +33,73 @@ for pos = 1:N_cal %[output:group:1a57dc51]
     psi_x_cal(pos) = psi_x_k;
     psi_y_cal(pos) = psi_y_k;
 
-    a_psi_x   = exp(1i * psi_x_k * ((1:EnvPars.N_x)-1))';
-    a_psi_y   = exp(1i * psi_y_k * ((1:EnvPars.N_y)-1))';
-    a_psi_x_y = kron(a_psi_y, a_psi_x);
+    % a_psi_x   = exp(1i * psi_x_k * ((1:EnvPars.N_x)-1))';
+    % a_psi_y   = exp(1i * psi_y_k * ((1:EnvPars.N_y)-1))';
+    % a_psi_x_y = kron(a_psi_y, a_psi_x);
+
+    %% Select the channel model
+
+    switch lower(EnvPars.channelModel)
+
+        case 'rician_los'
+
+            % Deterministic LoS steering vector
+            a_psi_x = exp( ...
+                -1i * psi_x_k * ...
+                (0:EnvPars.N_x-1)).';
+
+            a_psi_y = exp( ...
+                -1i * psi_y_k * ...
+                (0:EnvPars.N_y-1)).';
+
+            h = kron(a_psi_y, a_psi_x);
+
+        case 'rician_los_nlos'
+
+            % LoS + NLoS channel generated
+            h = generateChannel(pos_MU_k, EnvPars);
+
+        otherwise
+
+            error( ...
+                'Unknown channel model "%s". Use "LoS" or "LoS_NLoS".', ...
+                EnvPars.channelModel);
+    end
+
+    % Guarantee an N-by-1 column vector
+    h = h(:);
+
+    assert(numel(h) == EnvPars.N, ...
+        ['The selected channel returned %d coefficients, ' ...
+        'but EnvPars.N = %d.'], ...
+        numel(h), EnvPars.N);
+
+    % Normalize to unit average element power.
+    % This is appropriate for the controlled-SNR evaluation.
+    channelPower = mean(abs(h).^2);
+
+    if channelPower <= eps
+        error('The generated channel has approximately zero power.');
+    end
+
+    h = h / sqrt(channelPower);
+
+    % Store the exact channel used at this calibration position
+    h_cal(:,pos) = h;
 
     for t_psi = 1:EnvPars.T
         v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
-        r_unit   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y; %[output:7af2e62c]
-        peak_map(pos, EnvPars.t_x(t_psi), EnvPars.t_y(t_psi)) = max(abs(r_unit).^2);
+        % r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
+        r = EnvPars.G * diag(v0') * h;
+        peak_map(pos, EnvPars.t_x(t_psi), EnvPars.t_y(t_psi)) = max(abs(r).^2);
     end
 
     % Global maximum and best action for this position
     slice                 = squeeze(peak_map(pos,:,:));
     [global_max_cal(pos), idx] = max(slice(:));
     [best_tx_cal(pos), best_ty_cal(pos)] = ind2sub([EnvPars.T_x, EnvPars.T_y], idx);
-end %[output:group:1a57dc51]
-fprintf('Calibration complete.\n\n');
+end
+fprintf('Calibration complete.\n\n'); %[output:1b5c13d7]
 
 % Store calibration in EnvPars — available to step/reset functions
 EnvPars.N_cal          = N_cal;
@@ -57,6 +110,7 @@ EnvPars.pos_cal        = pos_cal;
 EnvPars.global_max_cal = global_max_cal;
 EnvPars.best_tx_cal    = best_tx_cal;
 EnvPars.best_ty_cal    = best_ty_cal;
+EnvPars.h_cal = h_cal;
 
 function [psi_x, psi_y] = computePsiFromPos(pos_MU, EnvPars)
     % Geometry: vector from SIM to MU. SIM on the ceiling, array in the
@@ -86,6 +140,6 @@ end
 %[output:3da17f4a]
 %   data: {"dataType":"text","outputData":{"text":"Grid: 10 x 10 = 100 calibration positions\n","truncated":false}}
 %---
-%[output:7af2e62c]
-%   data: {"dataType":"error","outputData":{"errorType":"runtime","text":"Unrecognized function or variable 'v0'."}}
+%[output:1b5c13d7]
+%   data: {"dataType":"text","outputData":{"text":"Calibration complete.\n\n","truncated":false}}
 %---

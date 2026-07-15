@@ -78,8 +78,6 @@ N_eval = 2000; % Number of episodes (random positions) to evaluate
 angle_rot_deg=0:1:46;
 
 
-
-
 fprintf('Running %d evaluation episodes...\n', N_eval);
 err_bf  = zeros(N_eval, length(angle_rot_deg));
 err_dqn = zeros(N_eval, length(angle_rot_deg));
