@@ -37,8 +37,8 @@ for pos = 1:N_cal %[output:group:1a57dc51]
 
     for t_psi = 1:EnvPars.T
         v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
-        r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y; %[output:7af2e62c]
-        peak_map(pos, EnvPars.t_x(t_psi), EnvPars.t_y(t_psi)) = max(abs(r).^2);
+        r_unit   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y; %[output:7af2e62c]
+        peak_map(pos, EnvPars.t_x(t_psi), EnvPars.t_y(t_psi)) = max(abs(r_unit).^2);
     end
 
     % Global maximum and best action for this position

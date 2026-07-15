@@ -217,27 +217,34 @@ cdl.ReceiveArrayOrientation = [cdlInfo.AnglesAoA(1) cdlInfo.AnglesZoA(1)-90 0]';
 % figure; displayChannel(cdl,'LinkEnd','Rx'); title('SIM Rx array');
 % view(0,90)
 %[text] #### Noise parameters; see \[3\]
-% Noise and interference parameters
-noiseFigure = 7;                             % dB see [10, Tab. 6-1]
-thermalNoiseDensity = -174;                  % dBm/Hz [11, Tab. 5, entry (14)]
-%Interference noise
-rxInterfDensity = -165.7;                    % dBm/Hz
-rxInterfDensity = -Inf;                    % no interference noise
+%% Noise power in dBm
 
-% Calculate the corresponding noise power
-% Receiver thermal noise density including noise figure
-rxNoiseDensity = thermalNoiseDensity + noiseFigure;   % dBm/Hz
+noiseFigure           = 7;       % dB
+thermalNoiseDensity    = -174;    % dBm/Hz
+rxInterfDensity        = -Inf;    % dBm/Hz, no interference
 
-% Sum noise and interference in linear mW/Hz
-totalNoiseDensity_dBHz = 10*log10(10^((rxNoiseDensity-30)/10) + 10^((rxInterfDensity-30)/10));
+% Receiver thermal-noise density including noise figure
+rxNoiseDensity_dBmHz = thermalNoiseDensity + noiseFigure;
 
-% Total noise power over bandwidth BW
-noisePower_dB = totalNoiseDensity_dBHz + 10*log10(BW);
+% Add thermal noise and interference in linear mW/Hz
+noiseDensity_mWHz = ...
+    10.^(rxNoiseDensity_dBmHz/10) + ...
+    10.^(rxInterfDensity/10);
+
+% Integrated receiver noise power
+noisePower_dBm = 10*log10(noiseDensity_mWHz) + 10*log10(BW);
+
+fprintf('Receiver noise power = %.2f dBm\n', noisePower_dBm);
+
+EnvPars.noisePower_dBm = noisePower_dBm;
+
+SNR_dB_vector = -10:5:40;
 
 %[text] #### SNR evaluation
-%Free path loss in the direct link IRS-MU
-Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
-SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:23c1d2de]
+% %Free path loss in the direct link IRS-MU
+% Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
+% SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:23c1d2de]
+SNR_dB = 20;       % dB, default value only
 
 %[text] #### Agent parameters
 %Environment related parameters
@@ -258,7 +265,8 @@ EnvPars.Gtx_dBi = evalin('base','Gtx_dBi');
 EnvPars.Grx_dBi = evalin('base','Grx_dBi');
 EnvPars.txArray.NumElements = evalin('base','txArray.NumElements');
 EnvPars.cdl = evalin('base','cdl');
-EnvPars.var_noise_dB = evalin('base','noisePower_dB');
+% EnvPars.var_noise_dB = evalin('base','noisePower_dB');
+EnvPars.noisePower_dBm = noisePower_dBm;
 EnvPars.r = 0;
 
 EnvPars.d_x = evalin('base','d_x');

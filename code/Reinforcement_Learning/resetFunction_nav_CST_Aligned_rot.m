@@ -21,24 +21,6 @@ a_psi_x   = exp(1i * LoggedSignals.psi_x * ((1:EnvPars.N_x)-1))';
 a_psi_y   = exp(1i * LoggedSignals.psi_y * ((1:EnvPars.N_y)-1))';
 a_psi_x_y = kron(a_psi_y, a_psi_x);
 
-% v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
-%
-% xi_cmd = mod(angle(v0), 2*pi);
-%
-% t_yx_cmd = EnvPars.F_tyx_real(xi_cmd) + ...
-%            1i*EnvPars.F_tyx_imag(xi_cmd);
-%
-% t_yy_cmd = EnvPars.F_tyy_real(xi_cmd) + ...
-%            1i*EnvPars.F_tyy_imag(xi_cmd);
-%
-% c_rot = t_yx_cmd*cosd(EnvPars.angle_rot_deg) + ...
-%         t_yy_cmd*sind(EnvPars.angle_rot_deg);
-%
-% q_rot = c_rot ./ t_yx_cmd;
-%
-% r = sqrt(db2pow(EnvPars.SNR_dB)) * ...
-%     EnvPars.G_CST * diag(v0') * ...
-%     (q_rot' .* a_psi_x_y);
 
 v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
 

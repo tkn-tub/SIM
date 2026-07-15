@@ -26,12 +26,18 @@ LoggedSignals.t_y = t_y_new;
 %% Received signal at new position
 t_psi = (t_y_new - 1) * EnvPars.T_x + t_x_new;
 
-a_psi_x   = exp(1i * LoggedSignals.psi_x * ((1:EnvPars.N_x)-1))';
-a_psi_y   = exp(1i * LoggedSignals.psi_y * ((1:EnvPars.N_y)-1))';
-a_psi_x_y = kron(a_psi_y, a_psi_x);
+% a_psi_x   = exp(1i * LoggedSignals.psi_x * ((1:EnvPars.N_x)-1))';
+% a_psi_y   = exp(1i * LoggedSignals.psi_y * ((1:EnvPars.N_y)-1))';
+% a_psi_x_y = kron(a_psi_y, a_psi_x);
+% 
+% v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
+% r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
 
-v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
-r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
+[r, r_signal] = computeSIM1ReceivedSignal( ...
+    t_psi, ...
+    LoggedSignals.h, ...
+    LoggedSignals.SNR_dB, ...
+    EnvPars);
 
 power_vec    = abs(r).^2;
 current_peak = max(power_vec);
@@ -42,7 +48,18 @@ at_peak = (t_x_new == EnvPars.best_tx_cal(LoggedSignals.pos_idx)) && ...
 IsDone  = at_peak || (LoggedSignals.stepCount >= EnvPars.MaxStepsPerEpisode);
 
 %% Reward -- non-negative acquisition (UNCHANGED from current run)
-normalised_peak = current_peak / LoggedSignals.global_max;
+% normalised_peak = current_peak / LoggedSignals.global_max;
+% reward = 0.1*normalised_peak + 40*at_peak;
+snr_linear = 10.^(LoggedSignals.SNR_dB/10);
+
+reference_peak = ...
+    snr_linear * LoggedSignals.global_max;
+
+normalised_peak = current_peak / max(reference_peak, eps);
+
+% Noise can occasionally produce a value above the noiseless maximum
+normalised_peak = min(normalised_peak, 1);
+
 reward = 0.1*normalised_peak + 40*at_peak;
 
 %% Observation -- ARGMAX-ALIGNED coherent field (validated: probe C)
