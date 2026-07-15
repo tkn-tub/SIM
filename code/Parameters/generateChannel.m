@@ -11,12 +11,44 @@ function h = generateChannel(pos_MU, EnvPars)
 % small-scale spatial interference.
 
 
-    KR = 10.^(EnvPars.KR_dB/10);
+    KR_dB = EnvPars.mu_K_dB + ...
+            EnvPars.sigma_K_dB*randn;
+
+    KR = 10.^(KR_dB/10);
 
     Nc   = EnvPars.Nc;
     Mray = EnvPars.Mray;
 
     kappa = 2*pi/EnvPars.lambda;
+
+
+    ASD_deg = 10.^( ...
+        EnvPars.mu_lgASD + ...
+        EnvPars.sigma_lgASD*randn);
+
+    ASA_deg = 10.^( ...
+        EnvPars.mu_lgASA + ...
+        EnvPars.sigma_lgASA*randn);
+
+    ZSA_deg = 10.^( ...
+        EnvPars.mu_lgZSA + ...
+        EnvPars.sigma_lgZSA*randn);
+
+    ZSD_deg = 10.^( ...
+        EnvPars.mu_lgZSD + ...
+        EnvPars.sigma_lgZSD*randn);
+
+    % Limits specified by the channel-generation procedure
+    ASD_deg = min(ASD_deg, 104);
+    ASA_deg = min(ASA_deg, 104);
+    ZSA_deg = min(ZSA_deg, 52);
+    ZSD_deg = min(ZSD_deg, 52);
+    
+
+    lgDS = EnvPars.mu_lgDS + ...
+        EnvPars.sigma_lgDS*randn;
+
+    DS_s = 10.^lgDS;
 
     %% LoS geometry
 
@@ -47,49 +79,78 @@ function h = generateChannel(pos_MU, EnvPars)
 
     %% Cluster powers Pc
 
-    if isempty(EnvPars.Pc)
+    %% Generate cluster delays and powers according to TR 38.901
 
-        % Temporary exponentially decaying profile.
-        % Replace with Pc generated according to 38.901 for the final model.
-        clusterIndex = (0:Nc-1).';
+    % DS_s must be the delay-spread realization in seconds
+    % generated earlier in this function.
 
-        Pc = exp(-clusterIndex/EnvPars.clusterPowerDecay);
+    Xdelay = max(rand(Nc,1), eps);
 
-    else
-        Pc = EnvPars.Pc(:);
+    % Equation (7.5-1): unnormalized cluster delays
+    tauPrime = ...
+        -EnvPars.rTau * DS_s .* log(Xdelay);
 
-        assert(numel(Pc) == Nc, ...
-            'EnvPars.eq6.Pc must contain exactly %d entries.', Nc);
-    end
+    % Equation (7.5-2): subtract minimum and sort
+    tau = sort(tauPrime - min(tauPrime));
 
+    % Per-cluster shadowing in dB
+    Zeta_dB = ...
+        EnvPars.clusterShadowingStd_dB .* ...
+        randn(Nc,1);
+
+    % Equation (7.5-5): unnormalized cluster powers
+    Pprime = ...
+        exp( ...
+        -tau .* ...
+        (EnvPars.rTau - 1) ./ ...
+        (EnvPars.rTau * DS_s)) .* ...
+        10.^(-Zeta_dB/10);
+
+    % Equation (7.5-6): normalize powers
+    Pc = Pprime / sum(Pprime);
+
+    % Remove clusters weaker than -25 dB relative to the strongest
+    relativePower_dB = ...
+        10*log10(Pc / max(Pc));
+
+    keepClusters = relativePower_dB >= -25;
+
+    Pc  = Pc(keepClusters);
+    tau = tau(keepClusters);
+
+    % Renormalize after removal
     Pc = Pc / sum(Pc);
 
-    %% NLoS clustered component
+    % Update the actual number of retained clusters
+    Nc = numel(Pc);
 
-    sigmaClusterTheta = deg2rad(EnvPars.clusterThetaSpread_deg);
-    sigmaClusterPhi   = deg2rad(EnvPars.clusterPhiSpread_deg);
-    sigmaRayTheta     = deg2rad(EnvPars.rayThetaSpread_deg);
-    sigmaRayPhi       = deg2rad(EnvPars.rayPhiSpread_deg);
 
     h_nlos = complex(zeros(EnvPars.N, 1));
 
     for c = 1:Nc
 
-        % Cluster-center direction
-        thetaCluster = theta0 + sigmaClusterTheta*randn;
-        phiCluster   = phi0   + sigmaClusterPhi*randn;
+        %% Generate cluster-center arrival angles
+
+        phiCluster = ...
+            phi0 + deg2rad(ASA_deg/1.4) .* randn(Nc,1);
+
+        thetaCluster = ...
+            theta0 + deg2rad(ZSA_deg) .* ...
+            sign(randn(Nc,1)) .* ...
+            abs(randn(Nc,1))/sqrt(2);
 
         for m = 1:Mray
 
-            % Ray direction around its cluster center
-            thetaRay = thetaCluster + sigmaRayTheta*randn;
-            phiRay   = phiCluster   + sigmaRayPhi*randn;
+            alpha_m = EnvPars.rayOffsetAlpha(m);
 
-            % Restrict arrivals to the visible half-space of the SIM
-            thetaRay = min(max(thetaRay, 0), pi/2 - 1e-6);
+            phiRay = phiCluster(c) + ...
+                deg2rad(EnvPars.clusterASA_deg * alpha_m);
 
-            aRay = steeringVector( ...
-                thetaRay, phiRay, EnvPars);
+            thetaRay = thetaCluster(c) + ...
+                deg2rad(EnvPars.clusterZSA_deg * alpha_m);
+
+            % Use the same steering-vector sign convention
+            aRay = steeringVector(thetaRay, phiRay, EnvPars);
 
             FRay = max(cos(thetaRay), 0).^ ...
                    EnvPars.elementCosinePower;

@@ -34,9 +34,20 @@ t_psi = (t_y_new - 1) * EnvPars.T_x + t_x_new;
 % r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
 
 
-v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
-r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * LoggedSignals.h;
+% v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
+% r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * LoggedSignals.h;
 
+%% Received signal at the new phase configuration
+
+v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
+
+r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
+           EnvPars.G * diag(v0') * LoggedSignals.h;
+
+u = (randn(EnvPars.N,1) + ...
+     1i*randn(EnvPars.N,1)) / sqrt(2);
+
+r = r_signal + u;
 
 
 power_vec    = abs(r).^2;
@@ -48,7 +59,20 @@ at_peak = (t_x_new == EnvPars.best_tx_cal(LoggedSignals.pos_idx)) && ...
 IsDone  = at_peak || (LoggedSignals.stepCount >= EnvPars.MaxStepsPerEpisode);
 
 %% Reward -- non-negative acquisition (UNCHANGED from current run)
-normalised_peak = current_peak / LoggedSignals.global_max;
+% normalised_peak = current_peak / LoggedSignals.global_max;
+% reward = 0.1*normalised_peak + 40*at_peak;
+snr_linear = db2pow(LoggedSignals.SNR_dB);
+
+reference_peak = ...
+    snr_linear * LoggedSignals.global_max;
+
+normalised_peak = ...
+    current_peak / max(reference_peak, eps);
+
+% Noise may occasionally make the measured peak exceed
+% the noiseless reference.
+normalised_peak = min(normalised_peak, 1);
+
 reward = 0.1*normalised_peak + 40*at_peak;
 
 %% Observation -- ARGMAX-ALIGNED coherent field (validated: probe C)

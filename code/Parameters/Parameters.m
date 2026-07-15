@@ -195,22 +195,33 @@ DS_ns = 10^(u_lgDS+sigma_lgDS);
 % CDL-E → strong LOS (larger first-tap power)
 profile   = 'CDL-D';      % NLOS: 'CDL-A/B/C'; LOS: 'CDL-D/E'
 
-%% --- CDL channel object (TR 38.901) --------------------------------------
-cdl = nrCDLChannel;
-cdl.DelayProfile         = profile;          % NLOS: CDL-A/B/C, LOS: CDL-D/E LOS (§7.7.1)
-cdl.DelaySpread          = DS_ns*1e-9;       % set RMS-DS via scaling (Eq. 7.7-1 in §7.7.3)
-cdl.CarrierFrequency     = fc;
-cdl.SampleRate           = fs;
-cdl.MaximumDopplerShift  = maxDoppler;
-
-% Attach the antenna elements to the CDL
-cdl.TransmitAntennaArray = txArray;
-cdl.ReceiveAntennaArray = rxArray;
-
-% Orient the transmit and receive antenna arrays to point at each other by using the LOS path angles returned in the characteristic information.
-cdlInfo = cdl.info;
-cdl.TransmitArrayOrientation = [cdlInfo.AnglesAoD(1) cdlInfo.AnglesZoD(1)-90 0]';
-cdl.ReceiveArrayOrientation = [cdlInfo.AnglesAoA(1) cdlInfo.AnglesZoA(1)-90 0]';
+% %% --- CDL channel object (TR 38.901) --------------------------------------
+% cdl = nrCDLChannel;
+% cdl.DelayProfile         = profile;          % NLOS: CDL-A/B/C, LOS: CDL-D/E LOS (§7.7.1)
+% % Draw one delay-spread realization
+% lgDS = EnvPars.mu_lgDS + ...
+%        EnvPars.sigma_lgDS*randn;
+% 
+% DS_s  = 10.^lgDS;       % seconds
+% DS_ns = DS_s*1e9;       % nanoseconds, only for display
+% 
+% fprintf('Generated InF DS = %.2f ns\n', DS_ns);
+% 
+% cdl.DelaySpread = DS_s;
+% 
+% % cdl.DelaySpread          = DS_ns*1e-9;       % set RMS-DS via scaling (Eq. 7.7-1 in §7.7.3)
+% cdl.CarrierFrequency     = fc;
+% cdl.SampleRate           = fs;
+% cdl.MaximumDopplerShift  = maxDoppler;
+% 
+% % Attach the antenna elements to the CDL
+% cdl.TransmitAntennaArray = txArray;
+% cdl.ReceiveAntennaArray = rxArray;
+% 
+% % Orient the transmit and receive antenna arrays to point at each other by using the LOS path angles returned in the characteristic information.
+% cdlInfo = cdl.info;
+% cdl.TransmitArrayOrientation = [cdlInfo.AnglesAoD(1) cdlInfo.AnglesZoD(1)-90 0]';
+% cdl.ReceiveArrayOrientation = [cdlInfo.AnglesAoA(1) cdlInfo.AnglesZoA(1)-90 0]';
 
 %% Channel model used during evaluation
 
@@ -220,34 +231,160 @@ cdl.ReceiveArrayOrientation = [cdlInfo.AnglesAoA(1) cdlInfo.AnglesZoA(1)-90 0]';
 EnvPars.channelModel = 'rician_los';
 % EnvPars.channelModel = 'rician_los_nlos';
 
+EnvPars.fc_GHz = fc/1e9;
+
+% Hall geometry required by the InF delay-spread formula
+EnvPars.V_hall = L_hall * W_hall * H_hall;
+
+EnvPars.S_hall = 2 * ( ...
+    L_hall*W_hall + ...
+    L_hall*H_hall + ...
+    W_hall*H_hall);
+
+% Delay spread: lgDS = log10(DS/1 second)
+EnvPars.mu_lgDS = ...
+    log10(26*(EnvPars.V_hall/EnvPars.S_hall) + 14) ...
+    - 9.35;
+
+EnvPars.sigma_lgDS = 0.15;
+
+% Large-scale angular spreads
+% lgAS = log10(AS/1 degree)
+EnvPars.mu_lgASD    = 1.56;
+EnvPars.sigma_lgASD = 0.25;
+
+EnvPars.mu_lgASA = ...
+    -0.18*log10(1 + EnvPars.fc_GHz) + 1.78;
+
+EnvPars.sigma_lgASA = ...
+    0.12*log10(1 + EnvPars.fc_GHz) + 0.20;
+
+EnvPars.mu_lgZSA = ...
+    -0.20*log10(1 + EnvPars.fc_GHz) + 1.50;
+
+EnvPars.sigma_lgZSA = 0.35;
+
+% Table 7.5-11
+EnvPars.mu_lgZSD    = 1.35;
+EnvPars.sigma_lgZSD = 0.35;
+
+% Rician K-factor in dB
+% EnvPars.mu_K_dB    = 30;
+% EnvPars.sigma_K_dB = 0;
+EnvPars.mu_K_dB    = 7;
+EnvPars.sigma_K_dB = 8;
+
+KR_dB = EnvPars.mu_K_dB + ...
+            EnvPars.sigma_K_dB*randn;
+
+EnvPars.KR = 10.^(KR_dB/10);
+
+% Delay-distribution proportionality factor
+EnvPars.rTau = 2.7;
+
+% Cross-polarization ratio
+EnvPars.mu_XPR_dB    = 12;
+EnvPars.sigma_XPR_dB = 6;
+
+% Per-cluster shadowing standard deviation
+EnvPars.clusterShadowingStd_dB = 4;
+
+EnvPars.Nc   = 25;
+EnvPars.Mray = 20;
+
+
+
+% Intra-cluster angular spreads from Table 7.5-6 Part-3
+%for arrival angles
+EnvPars.clusterASD_deg = 5;
+EnvPars.clusterASA_deg = 8;
+EnvPars.clusterZSA_deg = 9;
+
+EnvPars.rayOffsetAlpha = [ ...
+   -0.0447,  0.0447, ...
+   -0.1413,  0.1413, ...
+   -0.2492,  0.2492, ...
+   -0.3715,  0.3715, ...
+   -0.5129,  0.5129, ...
+   -0.6797,  0.6797, ...
+   -0.8844,  0.8844, ...
+   -1.1481,  1.1481, ...
+   -1.5195,  1.5195, ...
+   -2.1551,  2.1551];
+
+% Table 7.5-6 gives cluster DS as N/A for InF
+EnvPars.clusterDS_ns = NaN;
+
+% ZOD offset from Table 7.5-11
+EnvPars.ZODoffset_deg = 0;
+
+% Horizontal correlation distances of all listed InF LSPs
+EnvPars.corrDistance_DS_m  = 10;
+EnvPars.corrDistance_ASD_m = 10;
+EnvPars.corrDistance_ASA_m = 10;
+EnvPars.corrDistance_SF_m  = 10;
+EnvPars.corrDistance_K_m   = 10;  % LOS only
+EnvPars.corrDistance_ZSA_m = 10;
+EnvPars.corrDistance_ZSD_m = 10;
+
+% Controlled-SNR experiment
+EnvPars.normalizeH = true;
+
 % A fixed value is useful initially for debugging.
-EnvPars.KR_dB = 40;%Rician Factor
-
-%25 NLoS clusters and 20 rays per cluster
-EnvPars.Nc   = 8;
-EnvPars.Mray = 10;
-
-% Cluster powers.
-% Leave empty to use the temporary exponentially decaying profile below.
-% For the final paper, replace this with Pc from your 38.901 realization.
-EnvPars.Pc = [];
-
-% Temporary cluster-power decay factor
-EnvPars.clusterPowerDecay = 1.5;
-
-% Temporary angular-spread parameters
-% These are Monte-Carlo sensitivity parameters, not yet exact 38.901 values.
-EnvPars.clusterThetaSpread_deg = 2;
-EnvPars.clusterPhiSpread_deg   = 2;
-EnvPars.rayThetaSpread_deg     = 0.25;
-EnvPars.rayPhiSpread_deg       = 0.25;
-
+% EnvPars.KR_dB = 25;%Rician Factor
+% 
+% %25 NLoS clusters and 20 rays per cluster
+% EnvPars.Nc   = 25;
+% EnvPars.Mray = 20;
+% 
+% % Cluster powers.
+% % Leave empty to use the temporary exponentially decaying profile below.
+% % For the final paper, replace this with Pc from your 38.901 realization.
+% EnvPars.Pc = [];
+% 
+% % Temporary cluster-power decay factor
+% EnvPars.clusterPowerDecay = 1.5;
+EnvPars.rTau = 2.7;
+EnvPars.clusterShadowingStd_dB = 4;
+% 
+% % Temporary angular-spread parameters
+% % These are Monte-Carlo sensitivity parameters, not yet exact 38.901 values.
+% EnvPars.clusterThetaSpread_deg = 8;
+% EnvPars.clusterPhiSpread_deg   = 8;
+% EnvPars.rayThetaSpread_deg     = 1;
+% EnvPars.rayPhiSpread_deg       = 1;
+% 
 % Approximate cosine element-pattern amplitude
 EnvPars.elementCosinePower = 0;
 
+% % A fixed value is useful initially for debugging.
+% EnvPars.KR_dB = 25;%Rician Factor
+% 
+% %25 NLoS clusters and 20 rays per cluster
+% EnvPars.Nc   = 25;
+% EnvPars.Mray = 20;
+% 
+% % Cluster powers.
+% % Leave empty to use the temporary exponentially decaying profile below.
+% % For the final paper, replace this with Pc from your 38.901 realization.
+% EnvPars.Pc = [];
+% 
+% % Temporary cluster-power decay factor
+% EnvPars.clusterPowerDecay = 1.5;
+% 
+% % Temporary angular-spread parameters
+% % These are Monte-Carlo sensitivity parameters, not yet exact 38.901 values.
+% EnvPars.clusterThetaSpread_deg = 8;
+% EnvPars.clusterPhiSpread_deg   = 8;
+% EnvPars.rayThetaSpread_deg     = 1;
+% EnvPars.rayPhiSpread_deg       = 1;
+% 
+% % Approximate cosine element-pattern amplitude
+% EnvPars.elementCosinePower = 0;
+
 % For controlled-SNR Fig. 11, normalize every channel realization
 % so mean(abs(h).^2) = 1.
-EnvPars.normalizeH = true;
+% EnvPars.normalizeH = true;
 
 %% Additional NLoS power multiplier for diagnostic tests
 %
@@ -303,11 +440,12 @@ EnvPars.Ptx_dBm = evalin('base','Ptx_dBm');
 EnvPars.Gtx_dBi = evalin('base','Gtx_dBi');
 EnvPars.Grx_dBi = evalin('base','Grx_dBi');
 EnvPars.txArray.NumElements = evalin('base','txArray.NumElements');
-EnvPars.cdl = evalin('base','cdl');
+% EnvPars.cdl = evalin('base','cdl');
 EnvPars.var_noise_dB = evalin('base','noisePower_dB');
 EnvPars.r = 0;
 
 EnvPars.d_x = evalin('base','d_x');
+EnvPars.d_y = evalin('base','d_y');
 EnvPars.pos_SIM = evalin('base','pos_SIM');
 EnvPars.pos_MU  = [L_hall*rand(1,1)...
                    W_hall*rand(1,1)...
@@ -562,5 +700,5 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
 %---
 %[output:5580c95d]
-%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"                         N: 25\n                       N_x: 5\n                       N_y: 5\n                         T: 2500\n                       T_x: 50\n                       T_y: 50\n                    SNR_dB: 36.5005\n                 theta_min: 1.8485\n                 theta_max: 4.4347\n                        fc: 2.8000e+10\n                    lambda: 0.0107\n                   Ptx_dBm: 23\n                   Gtx_dBi: 14\n                   Grx_dBi: 8\n                   txArray: [1×1 struct]\n                       cdl: [1×1 nrCDLChannel]\n              var_noise_dB: -110.9794\n                         r: 0\n                       d_x: 0.0054\n                   pos_SIM: [5 5 4]\n                    pos_MU: [1.3317 1.7339 1.5000]\n                       n_y: [1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5]\n                       n_x: [1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5]\n                       t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 … ] (1×2500 double)\n                       t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 … ] (1×2500 double)\n                      h_MU: 1.5000\n                    L_hall: 10\n                    W_hall: 10\n                     N_cal: 100\n                 MU_margin: 0.5000\n               MaxEpisodes: 5000\n                     psi_x: 0\n                     psi_y: 0\n        MaxStepsPerEpisode: 150\n                 tolerance: 0.0251\n         StopTrainingValue: 142.5000\n           episode_counter: 0\n               delta_moves: [9×2 double]\n                 n_actions: 9\n            DiscountFactor: 0.9500\n              EpsilonDecay: 6.6667e-06\n    ExperienceBufferLength: 100000\n             MiniBatchSize: 128\n        TargetSmoothFactor: 1.0000e-03\n                 threshold: 0.8000\n          reward_threshold: 0.8000\n                 step_cost: 0.0100\n                peak_bonus: 10\n                    U_func: @(n_,t_n_)exp(1i*(-2*pi*(EnvPars.n_x(n_)-1).*(EnvPars.t_x(t_n_)-1)\/(EnvPars.N_x*EnvPars.T_x)-2*pi*(EnvPars.n_y(n_)-1).*(EnvPars.t_y(t_n_)-1)\/(EnvPars.N_y*EnvPars.T_y)))\n                     F_amp: [1×1 griddedInterpolant]\n            phase_min_meas: 0.1501\n            phase_max_meas: 6.1982\n                U_func_CST: @(n_,t_n_)U_func_cst(n_,t_n_,EnvPars)\n                         G: [25×25 double]\n                  peak_map: [100×50×50 double]\n                 psi_x_cal: [100×1 double]\n                 psi_y_cal: [100×1 double]\n                   pos_cal: [100×3 double]\n            global_max_cal: [100×1 double]\n               best_tx_cal: [100×1 double]\n               best_ty_cal: [100×1 double]\n              channelModel: 'rician_los'\n                     KR_dB: 40\n                        Nc: 8\n                      Mray: 10\n                        Pc: []\n         clusterPowerDecay: 1.5000\n    clusterThetaSpread_deg: 2\n      clusterPhiSpread_deg: 2\n        rayThetaSpread_deg: 0.2500\n          rayPhiSpread_deg: 0.2500\n        elementCosinePower: 0\n                normalizeH: 1\n            nlosPowerScale: 0\n"}}
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"              channelModel: 'rician_los_nlos'\n                    fc_GHz: 28\n                    V_hall: 1000\n                    S_hall: 600\n                   mu_lgDS: -7.5916\n                sigma_lgDS: 0.1500\n                  mu_lgASD: 1.5600\n               sigma_lgASD: 0.2500\n                  mu_lgASA: 1.5168\n               sigma_lgASA: 0.3755\n                  mu_lgZSA: 1.2075\n               sigma_lgZSA: 0.3500\n                  mu_lgZSD: 1.3500\n               sigma_lgZSD: 0.3500\n                   mu_K_dB: 7\n                sigma_K_dB: 8\n                        KR: 401.6710\n                      rTau: 2.7000\n                 mu_XPR_dB: 12\n              sigma_XPR_dB: 6\n    clusterShadowingStd_dB: 4\n                        Nc: 25\n                      Mray: 20\n            clusterASD_deg: 5\n            clusterASA_deg: 8\n            clusterZSA_deg: 9\n              clusterDS_ns: NaN\n             ZODoffset_deg: 0\n         corrDistance_DS_m: 10\n        corrDistance_ASD_m: 10\n        corrDistance_ASA_m: 10\n         corrDistance_SF_m: 10\n          corrDistance_K_m: 10\n        corrDistance_ZSA_m: 10\n        corrDistance_ZSD_m: 10\n                normalizeH: 1\n            nlosPowerScale: 0\n                         N: 25\n                       N_x: 5\n                       N_y: 5\n                         T: 2500\n                       T_x: 50\n                       T_y: 50\n                    SNR_dB: 36.5005\n                 theta_min: 1.8485\n                 theta_max: 4.4347\n                        fc: 2.8000e+10\n                    lambda: 0.0107\n                   Ptx_dBm: 23\n                   Gtx_dBi: 14\n                   Grx_dBi: 8\n                   txArray: [1×1 struct]\n              var_noise_dB: -110.9794\n                         r: 0\n                       d_x: 0.0054\n                       d_y: 0.0054\n                   pos_SIM: [5 5 4]\n                    pos_MU: [4.3391 9.6408 1.5000]\n                       n_y: [1 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5]\n                       n_x: [1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5 1 2 3 4 5]\n                       t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 … ] (1×2500 double)\n                       t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 … ] (1×2500 double)\n                      h_MU: 1.5000\n                    L_hall: 10\n                    W_hall: 10\n                     N_cal: 100\n                 MU_margin: 0.5000\n               MaxEpisodes: 5000\n                     psi_x: 0\n                     psi_y: 0\n        MaxStepsPerEpisode: 150\n                 tolerance: 0.0251\n         StopTrainingValue: 142.5000\n           episode_counter: 0\n               delta_moves: [9×2 double]\n                 n_actions: 9\n            DiscountFactor: 0.9500\n              EpsilonDecay: 6.6667e-06\n    ExperienceBufferLength: 100000\n             MiniBatchSize: 128\n        TargetSmoothFactor: 1.0000e-03\n                 threshold: 0.8000\n          reward_threshold: 0.8000\n                 step_cost: 0.0100\n                peak_bonus: 10\n                    U_func: @(n_,t_n_)exp(1i*(-2*pi*(EnvPars.n_x(n_)-1).*(EnvPars.t_x(t_n_)-1)\/(EnvPars.N_x*EnvPars.T_x)-2*pi*(EnvPars.n_y(n_)-1).*(EnvPars.t_y(t_n_)-1)\/(EnvPars.N_y*EnvPars.T_y)))\n                     F_amp: [1×1 griddedInterpolant]\n            phase_min_meas: 0.1501\n            phase_max_meas: 6.1982\n                U_func_CST: @(n_,t_n_)U_func_cst(n_,t_n_,EnvPars)\n                         G: [25×25 double]\n        elementCosinePower: 0\n"}}
 %---
