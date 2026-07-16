@@ -56,6 +56,14 @@ EnvPars.N_x=N_x;
 EnvPars.N_y=N_y;
 EnvPars.N=N;
 
+T_x=50
+T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
+T=T_x.*T_y;
+
+EnvPars.T = evalin('base','T');
+EnvPars.T_x = evalin('base','T_x');
+EnvPars.T_y = evalin('base','T_y');
+
 % Meta-atom indexing — store inside EnvPars so closures don't depend on workspace
 n = 1:EnvPars.N;
 EnvPars.n_y = ceil(n ./ EnvPars.N_x);
@@ -90,7 +98,7 @@ EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
 Calibration;
 
 
-EnvPars.MaxEpisodes = EnvPars.N_cal * 15;
+EnvPars.MaxEpisodes = EnvPars.N_cal * 30;
 
 % -------------------------------------------------------------------------
 % Observation override: aligned coherent Re/Im observation
@@ -299,7 +307,7 @@ if ~exist(save_dir, 'dir')
 end
 
 save_path = fullfile(save_dir, sprintf( ...
-    'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_%d_Mx_%d_Aligned.mat', EnvPars.N_x, M_x));
+    'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_%d_Mx_%d_Aligned_CDL.mat', EnvPars.N_x, M_x));
 
 criticNet = getModel(getCritic(agent));
 assertZeroBiases(criticNet, 'after training');
