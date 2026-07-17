@@ -307,7 +307,7 @@ if ~exist(save_dir, 'dir')
 end
 
 save_path = fullfile(save_dir, sprintf( ...
-    'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_%d_Mx_%d_Tx_%d_Aligned_CDL.mat', EnvPars.N_x, M_x, T_x));
+    'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_%d_Mx_%d_Tx_%d_Aligned.mat', EnvPars.N_x, M_x, T_x));
 
 criticNet = getModel(getCritic(agent));
 assertZeroBiases(criticNet, 'after training');

@@ -59,7 +59,8 @@ Calibration;
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_2_layers_Nx_4_Mx_5_Aligned.mat');
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_4_Mx_5_Tx_40_Aligned.mat')
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_4_Mx_5_Tx_50_Aligned.mat')
-agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_5_Mx_5_Aligned.mat')
+% agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_5_Mx_5_Aligned.mat')
+agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_4_Mx_5_Tx_60_Aligned.mat');
 
 if isfile(agent_path)
     load(agent_path, 'agent');
@@ -207,10 +208,21 @@ delete(gcp('nocreate'));
 fprintf('Parallel pool released.\n');
 %%
 %[text] ### Saving results
+% -------------------------------------------------------------------------
+% Save
+% -------------------------------------------------------------------------
+%Defining the file directory and name
+datasetDir = fullfile('..', 'Dataset');
+fileName = sprintf('Evaluation_Rotation_x_y_pol_%d_%d_Nx_%d_L_%d_Mx_%d_CST.mat', ...
+    angle_rot_deg(1),angle_rot_deg(end-1),N_x, L, M_x);
+savepath = fullfile(datasetDir, fileName);
+save(savepath, ...
+    'err_dqn', 'steps_taken_dqn','err_bf','angle_rot_deg','EnvPars','-v7.3');
+fprintf('Results saved to %s\n', savepath);
 
-save_path = fullfile('..', 'Dataset', 'Evaluation_Rotation_x_y_pol_0_45_Nx_5.mat');
-
-save(save_path, 'err_dqn', 'steps_taken_dqn', 'err_bf', 'angle_rot_deg', 'EnvPars');
+fprintf('\nparfor done: %.1f s total.\n', toc(t_start));
+delete(gcp('nocreate'));
+fprintf('Parallel pool released.\n');
 
 fprintf('Results saved to %s\n', save_path);
 %%
