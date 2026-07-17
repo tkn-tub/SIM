@@ -163,7 +163,7 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:1d0ad6ac]
 % T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 % T=T_x.*T_y
 %Fixing parameters
-T_x=60 %[output:7c3c3c33]
+T_x=50 %[output:7c3c3c33]
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
 T_x_vector=35:40;
