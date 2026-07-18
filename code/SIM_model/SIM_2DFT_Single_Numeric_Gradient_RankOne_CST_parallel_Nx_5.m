@@ -70,6 +70,10 @@ M_x=30
 M_y=M_x;
 M=M_y*M_x
 
+N_x=5
+N_y=N_x;
+N=N_x*N_y;
+
 % L=23
 % zeta=0.988
 % maxIter=600
