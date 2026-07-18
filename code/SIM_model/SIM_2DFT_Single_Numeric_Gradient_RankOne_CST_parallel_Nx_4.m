@@ -66,9 +66,9 @@ Parameters %[output:13a3f178] %[output:137d9f78] %[output:95322163] %[output:0a0
 
 maxIter=600
 
-L=2
+L=13
 zeta=0.988
-M_x=5
+M_x=15
 M_y=M_x;
 M=M_y*M_x
 

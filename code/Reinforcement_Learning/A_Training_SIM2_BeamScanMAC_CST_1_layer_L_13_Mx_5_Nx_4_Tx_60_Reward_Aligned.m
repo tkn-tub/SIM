@@ -98,7 +98,7 @@ EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
 Calibration;
 
 
-EnvPars.MaxEpisodes = EnvPars.N_cal * 200;
+EnvPars.MaxEpisodes = EnvPars.N_cal * 300;
 
 % -------------------------------------------------------------------------
 % Observation override: aligned coherent Re/Im observation

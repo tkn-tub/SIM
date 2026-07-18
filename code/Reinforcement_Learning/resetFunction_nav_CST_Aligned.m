@@ -32,10 +32,14 @@ t_psi = (LoggedSignals.t_y - 1) * EnvPars.T_x + LoggedSignals.t_x;
 % v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
 % r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * LoggedSignals.h;
 
-v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
+% v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
+v0 = EnvPars.U_func_CST(1:EnvPars.N, t_psi);
+
+% r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
+%            EnvPars.G * diag(v0') * LoggedSignals.h;
 
 r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
-           EnvPars.G * diag(v0') * LoggedSignals.h;
+           EnvPars.G_CST * diag(v0') * LoggedSignals.h;
 
 u = (randn(EnvPars.N,1) + ...
      1i*randn(EnvPars.N,1)) / sqrt(2);

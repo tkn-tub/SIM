@@ -88,9 +88,11 @@ for pos = 1:N_cal
     h_cal(:,pos) = h;
 
     for t_psi = 1:EnvPars.T
-        v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
+        % v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
+        v0  = EnvPars.U_func_CST(1:EnvPars.N, t_psi);
         % r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
-        r = EnvPars.G * diag(v0') * h;
+        % r = EnvPars.G * diag(v0') * h;
+        r = EnvPars.G_CST * diag(v0') * h;
         peak_map(pos, EnvPars.t_x(t_psi), EnvPars.t_y(t_psi)) = max(abs(r).^2);
     end
 
@@ -132,7 +134,7 @@ end
 %[appendix]{"version":"1.0"}
 %---
 %[metadata:view]
-%   data: {"layout":"onright","rightPanelPercent":40}
+%   data: {"layout":"onright","rightPanelPercent":36.3}
 %---
 %[output:106d88ec]
 %   data: {"dataType":"text","outputData":{"text":"=== Calibration phase ===\n","truncated":false}}
