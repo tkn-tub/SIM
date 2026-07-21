@@ -64,11 +64,11 @@ addingPathParentFolderByName('code'); %[output:575b79b3]
 Parameters %[output:13a3f178] %[output:137d9f78] %[output:95322163] %[output:0a074d5b] %[output:943238c7] %[output:00016c94] %[output:90c22b23] %[output:221fc7c7] %[output:3d41d18c] %[output:054252fe] %[output:14322d88] %[output:11276de9]
 
 
-maxIter=600
+maxIter=1000
 
-L=13
+L=12
 zeta=0.988
-M_x=15
+M_x=14
 M_y=M_x;
 M=M_y*M_x
 

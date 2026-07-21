@@ -1,6 +1,7 @@
 %% Evaluation of DQN vs Brute Force Localization Precision on Random Positions (CDF)
 % Executed until Done/Terminate conditions are met
-clc; clear all; close all;
+clc;
+clearvars;
 
 fprintf('=== Initializing Random Deployment Environment ===\n');
 % 1. Add required codebase folders to path
@@ -9,9 +10,34 @@ addingPathParentFolderByName('code');
 % 2. Load Parameters
 Parameters; 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Defining the DFT as ideal or with CST
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% %Recalculating the FFT
+% %Analytic FFT
+% % Kernel 2D-DFT == TO BE REPLACED BY SIM 1
+% G_func = @(n,n_psi) exp(-1i*2*pi*(n_psi_x(n_psi)-1)/EnvPars.N_x.*(n_x(n)-1)).* ...
+%     exp(-1i*2*pi*(n_psi_y(n_psi)-1)/EnvPars.N_y.*(n_y(n)-1));
+% [n_psi_grid, n_s_grid] = ndgrid(1:EnvPars.N, 1:EnvPars.N);
+% EnvPars.G = G_func(n_s_grid, n_psi_grid);
+% 
+% % Reclaculating the Upsilon matrix
+% EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
+%     -2*pi*(EnvPars.n_x(n_)-1) .* (EnvPars.t_x(t_n_)-1) / (EnvPars.N_x*EnvPars.T_x) ...
+%     -2*pi*(EnvPars.n_y(n_)-1) .* (EnvPars.t_y(t_n_)-1) / (EnvPars.N_y*EnvPars.T_y) ));
+
+% CST SIM1 front-end. Keep commented unless those fields exist.
+EnvPars.G      = EnvPars.G_CST;
+EnvPars.U_func = EnvPars.U_func_CST;
+
+%% ----------------- Start pool -----------------
+% delete(gcp('nocreate'));
+% parpool;
+
 % 3. Run Calibration (Requires Parameters to be in the workspace)
 Calibration;
-
 %Load the trained DQN agent
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_144_neurons_1_relu.mat');
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_navigation_4_hidden_916_phases_CST_Nx_4_Mx_25_Reward_Mixed.mat');
@@ -26,8 +52,9 @@ Calibration;
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_2_layers_Nx_4_Mx_5_Aligned.mat');
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_4_Mx_5_Tx_40_Aligned.mat')
 % agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_4_Mx_5_Tx_50_Aligned.mat')
-agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_5_Mx_5_Tx_50_Aligned.mat');
-
+% agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_5_Mx_5_Tx_50_Aligned.mat');
+agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_2_layers_7_atoms_L_13_Nx_4_Mx_15_Tx_60_Aligned_ideal.mat');
+% agent_path = fullfile('..', 'Dataset', 'dqn_agent_SIM2_BeamScanMAC_CST_2_layers_7_atoms_L_13_Nx_4_Mx_15_Tx_60_Aligned_CST.mat');
 
 if isfile(agent_path)
     load(agent_path, 'agent');
@@ -38,13 +65,11 @@ end
 
 
 
-%% ----------------- Start pool -----------------
-delete(gcp('nocreate'));
-parpool;
 
-SNR_dB_vector =30:10:40;%-10:10:30;
 
-N_eval = 2000;    % Use 5000 or more for the final paper result
+SNR_dB_vector =45;%0:1:30;
+
+N_eval = 3000;    % Use 5000 or more for the final paper result
 N_snr  = numel(SNR_dB_vector);
 
 err_dqn_snr       = nan(N_eval, N_snr);
@@ -115,8 +140,8 @@ for i_SNR=1:length(SNR_dB_vector)
 end
 
 fprintf('\nparfor done: %.1f s total.\n', toc(t_start));
-delete(gcp('nocreate'));
-fprintf('Parallel pool released.\n');
+% delete(gcp('nocreate'));
+% fprintf('Parallel pool released.\n');
 
 
 %Defining the file directory and name
@@ -140,7 +165,7 @@ else
     zetaStr = sprintf('%s_to_%s', fmtNum(min(zeta)), fmtNum(max(zeta)));
 end
 
-fileName = sprintf('Precision_vs_SNR_%d_%d_Nx_%d_L_%d_Mx_%d_Zeta_%s_CST_NLoS.mat', ...
+fileName = sprintf('Precision_vs_SNR_%d_%d_Nx_%d_L_%d_Mx_%d_Zeta_%s_CST_LoS.mat', ...
     SNR_dB_vector(1),SNR_dB_vector(end),N_x, L, round(M_x), zetaStr);
 
 savepath = fullfile(datasetDir, fileName);
@@ -149,6 +174,10 @@ save(savepath, ...
     'steps_dqn_snr', 'err_dqn_snr','SNR_dB_vector','-v7.3');
 
 fprintf('Results saved to %s\n', savepath);
+
+
+p95_error_dqn = prctile(err_dqn_snr, 95, 1)
+%%
 
 function addingPathParentFolderByName(targetName)
     % Start from the current directory

@@ -1,13 +1,13 @@
 %% Step 1. CALIBRATION ───────────────────────────────────────────────────────EnvPars.psi_x_cal
 fprintf('=== Calibration phase ===\n'); %[output:106d88ec]
 
-% Grid: 1 position per square metre over L_hall × W_hall
+% Grid: 1 position per square metre over x_max × y_max
 % Margin keeps MU away from walls
 
-n_x_cal  = floor(sqrt(EnvPars.N_cal * L_hall / W_hall));
+n_x_cal  = floor(sqrt(EnvPars.N_cal * x_max / y_max));
 n_y_cal  = floor(EnvPars.N_cal / n_x_cal);
-x_cal    = linspace(EnvPars.MU_margin, L_hall - EnvPars.MU_margin, n_x_cal);
-y_cal    = linspace(EnvPars.MU_margin, W_hall - EnvPars.MU_margin, n_y_cal);
+x_cal    = linspace(EnvPars.MU_margin, x_max - EnvPars.MU_margin, n_x_cal);
+y_cal    = linspace(EnvPars.MU_margin, y_max - EnvPars.MU_margin, n_y_cal);
 [X_cal, Y_cal] = meshgrid(x_cal, y_cal);
 X_cal    = X_cal(:);
 Y_cal    = Y_cal(:);
@@ -39,32 +39,43 @@ for pos = 1:N_cal
 
     %% Select the channel model
 
-    switch lower(EnvPars.channelModel)
+    % Deterministic LoS steering vector
+    a_psi_x = exp( ...
+        -1i * psi_x_k * ...
+        (0:EnvPars.N_x-1)).';
 
-        case 'rician_los'
+    a_psi_y = exp( ...
+        -1i * psi_y_k * ...
+        (0:EnvPars.N_y-1)).';
 
-            % Deterministic LoS steering vector
-            a_psi_x = exp( ...
-                -1i * psi_x_k * ...
-                (0:EnvPars.N_x-1)).';
-
-            a_psi_y = exp( ...
-                -1i * psi_y_k * ...
-                (0:EnvPars.N_y-1)).';
-
-            h = kron(a_psi_y, a_psi_x);
-
-        case 'rician_los_nlos'
-
-            % LoS + NLoS channel generated
-            h = generateChannel(pos_MU_k, EnvPars);
-
-        otherwise
-
-            error( ...
-                'Unknown channel model "%s". Use "LoS" or "LoS_NLoS".', ...
-                EnvPars.channelModel);
-    end
+    h = kron(a_psi_y, a_psi_x);
+            
+    % switch lower(EnvPars.channelModel)
+    % 
+    %     case 'rician_los'
+    % 
+    %         % Deterministic LoS steering vector
+    %         a_psi_x = exp( ...
+    %             -1i * psi_x_k * ...
+    %             (0:EnvPars.N_x-1)).';
+    % 
+    %         a_psi_y = exp( ...
+    %             -1i * psi_y_k * ...
+    %             (0:EnvPars.N_y-1)).';
+    % 
+    %         h = kron(a_psi_y, a_psi_x);
+    % 
+    %     case 'rician_los_nlos'
+    % 
+    %         % LoS + NLoS channel generated
+    %         h = generateChannel(pos_MU_k, EnvPars);
+    % 
+    %     otherwise
+    % 
+    %         error( ...
+    %             'Unknown channel model "%s". Use "LoS" or "LoS_NLoS".', ...
+    %             EnvPars.channelModel);
+    % end
 
     % Guarantee an N-by-1 column vector
     h = h(:);
@@ -88,11 +99,11 @@ for pos = 1:N_cal
     h_cal(:,pos) = h;
 
     for t_psi = 1:EnvPars.T
-        % v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
-        v0  = EnvPars.U_func_CST(1:EnvPars.N, t_psi);
+        v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
+        % v0  = EnvPars.U_func_CST(1:EnvPars.N, t_psi);
         % r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * a_psi_x_y;
-        % r = EnvPars.G * diag(v0') * h;
-        r = EnvPars.G_CST * diag(v0') * h;
+        % r = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * h;
+        r = EnvPars.G * diag(v0') * h;
         peak_map(pos, EnvPars.t_x(t_psi), EnvPars.t_y(t_psi)) = max(abs(r).^2);
     end
 
@@ -101,7 +112,19 @@ for pos = 1:N_cal
     [global_max_cal(pos), idx] = max(slice(:));
     [best_tx_cal(pos), best_ty_cal(pos)] = ind2sub([EnvPars.T_x, EnvPars.T_y], idx);
 end
-fprintf('Calibration complete.\n\n'); %[output:1b5c13d7]
+
+% Guard: reward normalization must match a direct field measurement
+pos    = 1;
+t_best = (best_ty_cal(pos)-1)*EnvPars.T_x + best_tx_cal(pos);
+v0     = EnvPars.U_func_CST(1:EnvPars.N, t_best);
+p_direct = max(abs(sqrt(db2pow(EnvPars.SNR_dB)) * ...
+           EnvPars.G_CST * diag(v0') * h_cal(:,pos)).^2);
+p_ref    = db2pow(EnvPars.SNR_dB) * global_max_cal(pos);
+mismatch_dB = 10*log10(p_direct / p_ref);
+%assert(abs(mismatch_dB) < 0.5, ...
+    % 'Reward normalization mismatch: %.1f dB — stale calibration tables?', mismatch_dB);
+
+fprintf('Calibration complete.\n\n'); %[output:42000b26]
 
 % Store calibration in EnvPars — available to step/reset functions
 EnvPars.N_cal          = N_cal;
@@ -142,6 +165,6 @@ end
 %[output:3da17f4a]
 %   data: {"dataType":"text","outputData":{"text":"Grid: 10 x 10 = 100 calibration positions\n","truncated":false}}
 %---
-%[output:1b5c13d7]
+%[output:42000b26]
 %   data: {"dataType":"text","outputData":{"text":"Calibration complete.\n\n","truncated":false}}
 %---

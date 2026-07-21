@@ -38,16 +38,12 @@ addingPathParentFolderByName('code');
 
 Parameters;   % defines EnvPars, ActInfo, and base workspace variables
 
-new_training=true;%make false is the training should continue from previous training
-
-
-
 % -------------------------------------------------------------------------
 % SIM2 hidden-plane size
 % -------------------------------------------------------------------------
 % For a 64-atom last hidden layer, use M_x = M_y = 8.
 % To reproduce the previous Mx=25 geometry, set M_x = 25.
-M_x = 5;
+M_x = 7;
 M_y = M_x;
 M   = M_x * M_y;
 
@@ -63,22 +59,6 @@ EnvPars.N=N;
 T_x=60
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
-
-%pause(5)
-
-% -------------------------------------------------------------------------
-% Continue training from previous solution
-% -------------------------------------------------------------------------
-%%Uncomment below for continue training
-if ~new_training
-    S = load(fullfile('..','Dataset', ...
-        'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_5_atoms_L_13_Nx_4_Mx_5_Tx_60_Aligned.mat'), ...
-        'agent','trainingStats','EnvPars');
-
-    agent   = S.agent;
-    EnvPars = S.EnvPars;      % use the training-time EnvPars, not a freshly built one
-    Episodes_extend = 5000;
-end
 
 EnvPars.T = evalin('base','T');
 EnvPars.T_x = evalin('base','T_x');
@@ -110,7 +90,7 @@ EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
     -2*pi*(EnvPars.n_x(n_)-1) .* (EnvPars.t_x(t_n_)-1) / (EnvPars.N_x*EnvPars.T_x) ...
     -2*pi*(EnvPars.n_y(n_)-1) .* (EnvPars.t_y(t_n_)-1) / (EnvPars.N_y*EnvPars.T_y) ));
 
-
+pause(2)
 
 % Optional CST SIM1 front-end. Keep commented unless those fields exist.
 % EnvPars.G      = EnvPars.G_CST;
@@ -297,7 +277,6 @@ agentOpts = rlDQNAgentOptions( ...
 agentOpts.EpsilonGreedyExploration.Epsilon      = 1.0;
 agentOpts.EpsilonGreedyExploration.EpsilonMin   = 0.05;
 agentOpts.EpsilonGreedyExploration.EpsilonDecay = EnvPars.EpsilonDecay;
-agentOpts.SaveExperienceBufferWithAgent = true; % saving the minibatch for the next run
 
 agent = rlDQNAgent(critic, agentOpts);
 
@@ -317,15 +296,7 @@ fprintf('=== SIM2 beam-scan + diode + digital MAC DQN training phase ===\n');
 fprintf('N_cal=%d | MaxEpisodes=%d | MaxSteps=%d | n_actions=%d | obsDim=%d | M=%d\n', ...
         EnvPars.N_cal, EnvPars.MaxEpisodes, EnvPars.MaxStepsPerEpisode, EnvPars.n_actions, numObs, M);
 
-if new_training
-    trainingStats = train(agent, env, trainOpts);
-else
-    resumeStats = S.trainingStats;
-    resumeStats.TrainingOptions.MaxEpisodes = ...
-        resumeStats.EpisodeIndex(end) + Episodes_extend;   % extend budget, otherwise it stops immediately
-
-    trainingStats = train(agent, env, resumeStats);
-end
+trainingStats = train(agent, env, trainOpts);
 
 % -------------------------------------------------------------------------
 % Save

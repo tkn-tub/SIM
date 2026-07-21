@@ -14,9 +14,30 @@ LoggedSignals.stepCount  = 0;
 LoggedSignals.t_x = randi(EnvPars.T_x);
 LoggedSignals.t_y = randi(EnvPars.T_y);
 
-%% Channel
+LoggedSignals.best_peak = -inf;   % best-visited tracking (first step will set it)
+LoggedSignals.best_t_x  = LoggedSignals.t_x;
+LoggedSignals.best_t_y  = LoggedSignals.t_y;
+LoggedSignals.psi_x_est_best = NaN;
+LoggedSignals.psi_y_est_best = NaN;
 
-LoggedSignals.h      = EnvPars.h_cal(:, pos_idx);
+%% Channel
+switch lower(EnvPars.channelModel)
+    case 'rician_los'
+        %Use the cannel LoS already computed in Calibration
+        LoggedSignals.h      = EnvPars.h_cal(:, pos_idx);
+
+    case 'rician_los_nlos'
+
+        pos_MU_k        = EnvPars.pos_cal(pos_idx, :).';
+        LoggedSignals.h = generateChannel(pos_MU_k, EnvPars);   % fresh LoS+NLoS, this episode
+
+    otherwise
+
+        error( ...
+            'Unknown channel model "%s". Use "LoS" or "LoS_NLoS".', ...
+            EnvPars.channelModel);
+end
+
 LoggedSignals.SNR_dB = EnvPars.SNR_dB;
 
 %% Initial observation
@@ -32,14 +53,14 @@ t_psi = (LoggedSignals.t_y - 1) * EnvPars.T_x + LoggedSignals.t_x;
 % v0  = EnvPars.U_func(1:EnvPars.N, t_psi);
 % r   = sqrt(db2pow(EnvPars.SNR_dB)) * EnvPars.G * diag(v0') * LoggedSignals.h;
 
-% v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
-v0 = EnvPars.U_func_CST(1:EnvPars.N, t_psi);
-
-% r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
-%            EnvPars.G * diag(v0') * LoggedSignals.h;
+v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
+% v0 = EnvPars.U_func_CST(1:EnvPars.N, t_psi);
 
 r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
-           EnvPars.G_CST * diag(v0') * LoggedSignals.h;
+           EnvPars.G * diag(v0') * LoggedSignals.h;
+
+% r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
+           % EnvPars.G_CST * diag(v0') * LoggedSignals.h;
 
 u = (randn(EnvPars.N,1) + ...
      1i*randn(EnvPars.N,1)) / sqrt(2);

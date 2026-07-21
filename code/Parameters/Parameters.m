@@ -7,11 +7,10 @@ total_iteration=1 %[output:1d0373a0]
 %[text] ## Scenario parameters
 %[text] ![SIM_reference_system.png](text:image:813f)
 %[text] Fig. 1: Scenario
-%room dimensions as follows from [10, Table 6.1-1]
+%mobility dimensions within the room as antennas are separated in D=20m as follows from [10, Table 6.1-1]
 x_max=10;%maximum mobility area in the ground plane
 y_max=10;%maximum mobility area in the ground plane
-z_max=10;%height of hall the BS in the room as given in 
-h_SIM=4; %height of the SIM
+h_SIM=10; %height of the SIM in the set {4, 8}
 h_MU=1.5; %height of the MU
 pos_SIM = [x_max/2 y_max/2 h_SIM]; % SIM position in meters (x0, y0, z0)
 pos_MU_init = [2 4 1.5]; % MU position in meters (x0, y0, z0), the height of the MU is given in [10, Table 6.1-1]
@@ -66,16 +65,15 @@ N_y=N_x; %to account for a balanced error in the x an y axes
 N=N_x.*N_y %[output:18b88e21]
 
 %number of meta-atoms in the intermediate layers
-M_x=15 %[output:6088ac05]
+M_x=14 %[output:6088ac05]
 M_y=M_x;
 M=M_x*M_y %[output:38d6f3e6]
 %M=225;%as follows from [1, Sec. IV A] for the (4x4 grid)
-% M=121;%as follows from [1, Sec. IV A] for the (4x4 grid)
+% M=121;%as follows from [1, Sec. IV A] for the (2x2 grid)
 % M_x=sqrt(M) 
 % M_y=M_x
 %number of intermediate SIM layers
-% L = 13; %as follows from [1, Sec. IV A] for the (4x4 grid)
-L = 7;
+L = 12 %as follows from [1, Sec. IV A] for the (4x4 grid) %[output:1d0ad6ac]
 % L=7;%as follows from [1, Sec. IV A] for the (2x2 grid)
 %distance between atoms
 d_x=lambda/2;
@@ -96,12 +94,10 @@ s_layer = T_SIM/L;   %as follows from [1, Sec. II B]
 A_atom  = d_x*d_y; % meta-atom area (paper uses A_atom-atom)
 
 %SIM Position
-%defining the hall dimensions in accordance with Table 7.2-4 pp. 21 in [8]
-L_hall= x_max; % length of factory hall
-W_hall= y_max; %width of hall
-H_hall=z_max; %height (ceiling)
-SIM_Pos = [L_hall/2 W_hall/2 4];       % SIM center on ceiling
-simSize = 1.0;          % just for plotting SIM frame size (meters)
+%defining the hall dimensions in accordance with Table 6.1-1 pp. 18 in [10] TR 38857-h00
+L_hall= 120; % length of factory hall in m
+W_hall= 60; %width of hall
+H_hall= 10; %height (ceiling)
 % Rx_element='38.901';   % good surrogate fkr directional, patch-like element; Peak gain ≈ 8 dBi; realistic azimuth / elevation beamwidths (not a sphere).
 % Rx_array_normal='z';
 Rx_orientation=[0; 0; 0];% [azimuth; downtilt; slant], % boresight -z
@@ -126,7 +122,7 @@ zeta_ini=0.980;
 zeta_delta=0.001;
 zeta_end=0.980;
 % zeta = 0.1:0.1:(1-0.1); %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration
-zeta = zeta_ini:zeta_delta:zeta_end %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration %[output:1d0ad6ac]
+zeta = zeta_ini:zeta_delta:zeta_end %decay parameter in [Eq. (20), 1], it controls the maximum phase rotation per iteration %[output:7c3c3c33]
 tol = 1e-8; %tolerance of the approximation
 seed=1;
 
@@ -134,7 +130,7 @@ seed=1;
 total_MUpositions=1;
 %MU speed of velocity
 MU_speed=3*1000/60/60;%corresponding to 3km/h meter per second as follows from [10, Tab. 6.1-1]
-Ptx_dBm = 23; % transmit power in dBm
+Ptx_dBm = 24; % transmit power in dBm Table 6.1-1 pp. 18 in [10] TR 38857-h00
 Ptx = db2pow(Ptx_dBm-30);
 Gtx_elem_dBi = 8;                          % desired antenna peak gain
                  % convert to amplitude factor
@@ -157,8 +153,8 @@ txElem  = phased.CosineAntennaElement('FrequencyRange',[fc-5e9 fc+5e9], ...
 txArray = phased.ULA('NumElements',4,'Element',txElem,'ElementSpacing',lambda/2);
 
 %[text] #### Localization protocol parameters
-T_coh=sqrt(9/(16*pi))*physconst('LightSpeed')*MU_speed/fc %[output:7c3c3c33]
-N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:23c1d2de]
+T_coh=sqrt(9/(16*pi))*physconst('LightSpeed')*MU_speed/fc %[output:23c1d2de]
+N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:5580c95d]
 %T=1024;%see [1, Sec. VI.C.]
 %T_x=ceil(sqrt(T_coh/T_loc))
 % T_x=1:ceil(sqrt(T_coh/T_PPDU_loc));
@@ -166,7 +162,7 @@ N_packets_coh=floor(sqrt(T_coh/T_PPDU_loc)) %[output:23c1d2de]
 % T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 % T=T_x.*T_y
 %Fixing parameters
-T_x=60 %[output:5580c95d]
+T_x=60 %[output:36e595f1]
 T_y=T_x; %accounting for a balanced error in the x an y axes of the Fourier transform
 T=T_x.*T_y;
 T_x_vector=35:40;
@@ -226,8 +222,8 @@ profile   = 'CDL-D';      % NLOS: 'CDL-A/B/C'; LOS: 'CDL-D/E'
 % Options:
 %   'LoS' : LoS steering vector plus AWGN
 %   'Rician_LoS_NLoS' : Rician LoS + clustered NLoS channel
-EnvPars.channelModel = 'rician_los';
-% EnvPars.channelModel = 'rician_los_nlos';
+% EnvPars.channelModel = 'rician_los';
+EnvPars.channelModel = 'rician_los_nlos';
 
 EnvPars.fc_GHz = fc/1e9;
 
@@ -267,10 +263,10 @@ EnvPars.mu_lgZSD    = 1.35;
 EnvPars.sigma_lgZSD = 0.35;
 
 % Rician K-factor in dB
-% EnvPars.mu_K_dB    = 30;
-% EnvPars.sigma_K_dB = 0;
 EnvPars.mu_K_dB    = 7;
 EnvPars.sigma_K_dB = 8;
+% EnvPars.mu_K_dB    = 7;
+% EnvPars.sigma_K_dB = 8;
 
 KR_dB = EnvPars.mu_K_dB + ...
             EnvPars.sigma_K_dB*randn;
@@ -391,7 +387,7 @@ EnvPars.elementCosinePower = 0;
 % 0.01  : use 1% of its nominal power
 % 0     : completely remove the NLoS component
 
-EnvPars.nlosPowerScale = 0;
+EnvPars.nlosPowerScale = 1;
 
 % figure; displayChannel(cdl,'LinkEnd','Tx');
 % view(0,90)
@@ -418,13 +414,16 @@ noisePower_dB = totalNoiseDensity_dBHz + 10*log10(BW);
 %[text] #### SNR evaluation
 %Free path loss in the direct link IRS-MU
 Lr = (lambda/(2*pi*norm(d_MU_SIM_max)))^2;
-SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:36e595f1]
+SNR_dB=Ptx_dBm-30+pow2db(Lr)-noisePower_dB %[output:2177d08d]
 
 %[text] #### Agent parameters
 %Environment related parameters
 EnvPars.N = evalin('base','N');
 EnvPars.N_x = evalin('base','N_x');
 EnvPars.N_y = evalin('base','N_y');
+EnvPars.M = evalin('base','M');
+EnvPars.M_x = evalin('base','M_x');
+EnvPars.M_y = evalin('base','M_y');
 EnvPars.T = evalin('base','T');
 EnvPars.T_x = evalin('base','T_x');
 EnvPars.T_y = evalin('base','T_y');
@@ -475,13 +474,13 @@ EnvPars.h_MU = pos_MU_init(3);
 % Room dimensions — taken from Parameters
 EnvPars.L_hall = L_hall;
 EnvPars.W_hall = W_hall;
-EnvPars.N_cal=L_hall*W_hall; %approximante number of calibration measurements to compute the maximum of the DFT per MU position, it is approximate due to the margins between the MU and walls
+EnvPars.N_cal=x_max*y_max; %approximante number of calibration measurements to compute the maximum of the DFT per MU position, it is approximate due to the margins between the MU and walls
 
-EnvPars.MU_margin = 0.5; %margin of the MU from the walls.
+EnvPars.MU_margin = 0; %margin of the MU from the walls.
 
 %Training Parameters
 % Episode parameters (will be initialized on reset)
-EnvPars.MaxEpisodes=T*25; %number of posible combination of phases, and 10 times to assure the random reset makes at least once per position
+% EnvPars.MaxEpisodes=T*25; %number of posible combination of phases, and 10 times to assure the random reset makes at least once per position
 EnvPars.MaxEpisodes=5000;
 
 
@@ -490,15 +489,17 @@ EnvPars.psi_y = 0;
 %EnvPars.MaxStepsPerEpisode = EnvPars.T;%number of steps per episode equals the number of packets along the channel coherence time
 % Max steps: longest possible Manhattan path across the grid
 EnvPars.MaxStepsPerEpisode = 1.5*(EnvPars.T_x + EnvPars.T_y);
+% EnvPars.MaxStepsPerEpisode = 10*(EnvPars.T_x + EnvPars.T_y);
 % EnvPars.MaxStepsPerEpisode = EnvPars.T_x*EnvPars.T_y;
 
 EnvPars.tolerance = pi/80; % error tolerance reward C
 EnvPars.tolerance = 2*pi / (EnvPars.N_x * EnvPars.T_x);  % ≈ 0.13 rad reward B
-EnvPars.StopTrainingValue=1000.0; % reward C
-EnvPars.StopTrainingValue=11 * EnvPars.MaxStepsPerEpisode; % asking to stop early only when the whole episode has been perfect for reward B
+% EnvPars.StopTrainingValue=1000.0; % reward C
+% EnvPars.StopTrainingValue=11 * EnvPars.MaxStepsPerEpisode; % asking to stop early only when the whole episode has been perfect for reward B
 % Stop when average episode reward reaches ~95% of maximum possible
 % Maximum episode reward = 1.0 × MaxStepsPerEpisode (peak found, stay there)
-EnvPars.StopTrainingValue = 0.95 * EnvPars.MaxStepsPerEpisode;
+% EnvPars.StopTrainingValue = 0.95 * EnvPars.MaxStepsPerEpisode;
+EnvPars.StopTrainingValue = 40+0.1*180;
 
 EnvPars.episode_counter=0; %counts the number of episodes during training
 
@@ -509,7 +510,7 @@ EnvPars.delta_moves = [-1,-1; -1, 0; -1,+1;
                        +1,-1; +1, 0; +1,+1];
 EnvPars.n_actions   = size(EnvPars.delta_moves, 1);   % 9
 
-EnvPars.DiscountFactor=0.95 %[output:2177d08d]
+EnvPars.DiscountFactor=0.98 %[output:754f46e6]
 %[text] Calculation of the EpsilonDecay factor
 %[text] We calculate the number of random visits to states, which is given by
 %[text] random steps needed = number of actions × visits per action = 144×150=21,600 steps
@@ -532,7 +533,7 @@ exploration_episodes = 3000;
 
 EnvPars.EpsilonDecay = 3.0 / (exploration_episodes * EnvPars.MaxStepsPerEpisode);
 
-EnvPars.ExperienceBufferLength=1e5;%set the lenght of the agent's circular buffer, too small (e.g. 1,000): the agent only remembers recent experience, forgets early exploration, Too large (e.g. 10^7): memory cost is high, and very old experiences (from when the policy was much worse) pollute the minibatch
+EnvPars.ExperienceBufferLength=5e5;%set the lenght of the agent's circular buffer, too small (e.g. 1,000): the agent only remembers recent experience, forgets early exploration, Too large (e.g. 10^7): memory cost is high, and very old experiences (from when the policy was much worse) pollute the minibatch
 EnvPars.MiniBatchSize=128;
 EnvPars.TargetSmoothFactor=1e-3;% this factor weights the amount of the NN coefficients used to update the target estimation of the Q function as wtarget←(1−τ)⋅wtarget+τ⋅wmain
 
@@ -591,13 +592,18 @@ EnvPars.G = G_func(n_s_grid, n_psi_grid);
 % ---- Trained CST-realistic SIM-1 G (separate from analytic EnvPars.G) ----
 
 % sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_single_zeta_Nx_4_28_GHz.mat');
-% sim1_file = fullfile('..', 'Dataset',
-% 'G_Nx_4_L_2_Mx_5_Zeta_0_988_CST.mat');%Relative Loss -0.9 dB, reward<10
+% sim1_file = fullfile('..', 'Dataset','G_Nx_4_L_2_Mx_5_Zeta_0_988_CST.mat');%Relative Loss -0.9 dB, reward<10
 % sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_7_Mx_12_Zeta_0_988_CST.mat'); %Relative Loss -3.3 dB, reward <12
-% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_9_Mx_12_Zeta_0_988_CST.mat');
+% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_9_Mx_12_Zeta_0_988_CST.mat');% reward <22
 % sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_11_Mx_12_Zeta_0_988_CST.mat'); %Relative Loss -18.3 dB, 
+% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_12_Mx_12_Zeta_0_988_CST.mat'); %Relative Loss -18.3 dB, 
+% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_12_Mx_13_Zeta_0_988_CST.mat'); %Relative Loss -29 dB, 
+sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_12_Mx_14_Zeta_0_988_CST.mat'); %Relative Loss -32.5 dB, 
+% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_12_Mx_15_Zeta_0_988_CST.mat'); %Relative loss -35.4 dB
 % sim1_file = fullfile('..', 'Dataset','G_Nx_4_L_13_Mx_12_Zeta_0_988_CST.mat'); %Relative Loss -20.8 dB, reward<22
-sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_13_Mx_15_Zeta_0_988_CST.mat');%Relative Loss -38.5 dB, 
+% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_13_Mx_15_Zeta_0_988_CST.mat');%Relative Loss -38.5 dB, reward<33
+% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_13_Mx_19_Zeta_0_988_CST.mat');%Relative Loss -42.4 dB,
+% sim1_file = fullfile('..', 'Dataset', 'G_Nx_4_L_15_Mx_19_Zeta_0_988_CST.mat');%Relative Loss -53.5 dB, reward 
 
 % sim1_file = fullfile('..', 'Dataset', 'SIM_training_CST_zeta_0.988_Nx_6.mat');
 S_sim1 = load(sim1_file, 'G_vs_eta', 'beta_final');
@@ -679,29 +685,32 @@ end
 %   data: {"dataType":"textualVariable","outputData":{"name":"N","value":"16"}}
 %---
 %[output:6088ac05]
-%   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"12"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"M_x","value":"15"}}
 %---
 %[output:38d6f3e6]
-%   data: {"dataType":"textualVariable","outputData":{"name":"M","value":"144"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"M","value":"225"}}
 %---
 %[output:1d0ad6ac]
-%   data: {"dataType":"textualVariable","outputData":{"name":"zeta","value":"0.9800"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"L","value":"13"}}
 %---
 %[output:7c3c3c33]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0038"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"zeta","value":"0.9800"}}
 %---
 %[output:23c1d2de]
-%   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"T_coh","value":"0.0038"}}
 %---
 %[output:5580c95d]
-%   data: {"dataType":"textualVariable","outputData":{"name":"T_x","value":"60"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"N_packets_coh","value":"12"}}
 %---
 %[output:36e595f1]
-%   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"T_x","value":"60"}}
 %---
 %[output:2177d08d]
-%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"              channelModel: 'rician_los'\n                    fc_GHz: 28\n                    V_hall: 1000\n                    S_hall: 600\n                   mu_lgDS: -7.5916\n                sigma_lgDS: 0.1500\n                  mu_lgASD: 1.5600\n               sigma_lgASD: 0.2500\n                  mu_lgASA: 1.5168\n               sigma_lgASA: 0.3755\n                  mu_lgZSA: 1.2075\n               sigma_lgZSA: 0.3500\n                  mu_lgZSD: 1.3500\n               sigma_lgZSD: 0.3500\n                   mu_K_dB: 7\n                sigma_K_dB: 8\n                        KR: 3.4358\n                      rTau: 2.7000\n                 mu_XPR_dB: 12\n              sigma_XPR_dB: 6\n    clusterShadowingStd_dB: 4\n                        Nc: 25\n                      Mray: 20\n            clusterASD_deg: 5\n            clusterASA_deg: 8\n            clusterZSA_deg: 9\n            rayOffsetAlpha: [-0.0447 0.0447 -0.1413 0.1413 -0.2492 0.2492 -0.3715 0.3715 -0.5129 0.5129 -0.6797 0.6797 -0.8844 0.8844 -1.1481 1.1481 -1.5195 1.5195 -2.1551 2.1551]\n              clusterDS_ns: NaN\n             ZODoffset_deg: 0\n         corrDistance_DS_m: 10\n        corrDistance_ASD_m: 10\n        corrDistance_ASA_m: 10\n         corrDistance_SF_m: 10\n          corrDistance_K_m: 10\n        corrDistance_ZSA_m: 10\n        corrDistance_ZSD_m: 10\n                normalizeH: 1\n        elementCosinePower: 0\n            nlosPowerScale: 0\n                         N: 16\n                       N_x: 4\n                       N_y: 4\n                         T: 3600\n                       T_x: 60\n                       T_y: 60\n                    SNR_dB: 36.5005\n                 theta_min: 1.8485\n                 theta_max: 4.4347\n                        fc: 2.8000e+10\n                    lambda: 0.0107\n                   Ptx_dBm: 23\n                   Gtx_dBi: 14\n                   Grx_dBi: 8\n                   txArray: [1×1 struct]\n              var_noise_dB: -110.9794\n                         r: 0\n                       d_x: 0.0054\n                       d_y: 0.0054\n                   pos_SIM: [5 5 4]\n                    pos_MU: [4.2176 9.1574 1.5000]\n                       n_y: [1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4]\n                       n_x: [1 2 3 4 1 2 3 4 1 2 3 4 1 2 3 4]\n                       t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 … ] (1×3600 double)\n                       t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 … ] (1×3600 double)\n                      h_MU: 1.5000\n                    L_hall: 10\n                    W_hall: 10\n                     N_cal: 100\n                 MU_margin: 0.5000\n               MaxEpisodes: 5000\n                     psi_x: 0\n                     psi_y: 0\n        MaxStepsPerEpisode: 180\n                 tolerance: 0.0262\n         StopTrainingValue: 171\n           episode_counter: 0\n               delta_moves: [9×2 double]\n                 n_actions: 9\n            DiscountFactor: 0.9500\n              EpsilonDecay: 5.5556e-06\n    ExperienceBufferLength: 100000\n             MiniBatchSize: 128\n        TargetSmoothFactor: 1.0000e-03\n                 threshold: 0.8000\n          reward_threshold: 0.8000\n                 step_cost: 0.0100\n                peak_bonus: 10\n                    U_func: @(n_,t_n_)exp(1i*(-2*pi*(EnvPars.n_x(n_)-1).*(EnvPars.t_x(t_n_)-1)\/(EnvPars.N_x*EnvPars.T_x)-2*pi*(EnvPars.n_y(n_)-1).*(EnvPars.t_y(t_n_)-1)\/(EnvPars.N_y*EnvPars.T_y)))\n                     F_amp: [1×1 griddedInterpolant]\n            phase_min_meas: 0.1501\n            phase_max_meas: 6.1982\n                U_func_CST: @(n_,t_n_)U_func_cst(n_,t_n_,EnvPars)\n                         G: [16×16 double]\n                     G_CST: [16×16 double]\n                  peak_map: [100×60×60 double]\n                 psi_x_cal: [100×1 double]\n                 psi_y_cal: [100×1 double]\n                   pos_cal: [100×3 double]\n            global_max_cal: [100×1 double]\n               best_tx_cal: [100×1 double]\n               best_ty_cal: [100×1 double]\n                     h_cal: [16×100 double]\n"}}
+%   data: {"dataType":"textualVariable","outputData":{"name":"SNR_dB","value":"36.5005"}}
+%---
+%[output:754f46e6]
+%   data: {"dataType":"textualVariable","outputData":{"header":"struct with fields:","name":"EnvPars","value":"              channelModel: 'rician_los'\n                    fc_GHz: 28\n                    V_hall: 1000\n                    S_hall: 600\n                   mu_lgDS: -7.5916\n                sigma_lgDS: 0.1500\n                  mu_lgASD: 1.5600\n               sigma_lgASD: 0.2500\n                  mu_lgASA: 1.5168\n               sigma_lgASA: 0.3755\n                  mu_lgZSA: 1.2075\n               sigma_lgZSA: 0.3500\n                  mu_lgZSD: 1.3500\n               sigma_lgZSD: 0.3500\n                   mu_K_dB: 7\n                sigma_K_dB: 8\n                        KR: 0.5420\n                      rTau: 2.7000\n                 mu_XPR_dB: 12\n              sigma_XPR_dB: 6\n    clusterShadowingStd_dB: 4\n                        Nc: 25\n                      Mray: 20\n            clusterASD_deg: 5\n            clusterASA_deg: 8\n            clusterZSA_deg: 9\n            rayOffsetAlpha: [-0.0447 0.0447 -0.1413 0.1413 -0.2492 0.2492 -0.3715 0.3715 -0.5129 0.5129 -0.6797 0.6797 -0.8844 0.8844 -1.1481 1.1481 -1.5195 1.5195 -2.1551 2.1551]\n              clusterDS_ns: NaN\n             ZODoffset_deg: 0\n         corrDistance_DS_m: 10\n        corrDistance_ASD_m: 10\n        corrDistance_ASA_m: 10\n         corrDistance_SF_m: 10\n          corrDistance_K_m: 10\n        corrDistance_ZSA_m: 10\n        corrDistance_ZSD_m: 10\n                normalizeH: 1\n        elementCosinePower: 0\n            nlosPowerScale: 0\n                         N: 16\n                       N_x: 4\n                       N_y: 4\n                         M: 225\n                       M_x: 15\n                       M_y: 15\n                         T: 3600\n                       T_x: 60\n                       T_y: 60\n                    SNR_dB: 36.5005\n                 theta_min: 1.8485\n                 theta_max: 4.4347\n                        fc: 2.8000e+10\n                    lambda: 0.0107\n                   Ptx_dBm: 23\n                   Gtx_dBi: 14\n                   Grx_dBi: 8\n                   txArray: [1×1 struct]\n              var_noise_dB: -110.9794\n                         r: 0\n                       d_x: 0.0054\n                       d_y: 0.0054\n                   pos_SIM: [5 5 4]\n                    pos_MU: [8.4913 9.3399 1.5000]\n                       n_y: [1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4]\n                       n_x: [1 2 3 4 1 2 3 4 1 2 3 4 1 2 3 4]\n                       t_y: [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 … ] (1×3600 double)\n                       t_x: [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 … ] (1×3600 double)\n                      h_MU: 1.5000\n                    L_hall: 10\n                    W_hall: 10\n                     N_cal: 100\n                 MU_margin: 0.5000\n               MaxEpisodes: 5000\n                     psi_x: 0\n                     psi_y: 0\n        MaxStepsPerEpisode: 180\n                 tolerance: 0.0262\n         StopTrainingValue: 58\n           episode_counter: 0\n               delta_moves: [9×2 double]\n                 n_actions: 9\n            DiscountFactor: 0.9800\n              EpsilonDecay: 5.5556e-06\n    ExperienceBufferLength: 500000\n             MiniBatchSize: 128\n        TargetSmoothFactor: 1.0000e-03\n                 threshold: 0.8000\n          reward_threshold: 0.8000\n                 step_cost: 0.0100\n                peak_bonus: 10\n                    U_func: @(n_,t_n_)exp(1i*(-2*pi*(EnvPars.n_x(n_)-1).*(EnvPars.t_x(t_n_)-1)\/(EnvPars.N_x*EnvPars.T_x)-2*pi*(EnvPars.n_y(n_)-1).*(EnvPars.t_y(t_n_)-1)\/(EnvPars.N_y*EnvPars.T_y)))\n                     F_amp: [1×1 griddedInterpolant]\n            phase_min_meas: 0.1501\n            phase_max_meas: 6.1982\n                U_func_CST: @(n_,t_n_)U_func_cst(n_,t_n_,EnvPars)\n                         G: [16×16 double]\n                     G_CST: [16×16 double]\n                  peak_map: [100×60×60 double]\n                 psi_x_cal: [100×1 double]\n                 psi_y_cal: [100×1 double]\n                   pos_cal: [100×3 double]\n            global_max_cal: [100×1 double]\n               best_tx_cal: [100×1 double]\n               best_ty_cal: [100×1 double]\n                     h_cal: [16×100 double]\n"}}
 %---
 %[output:700bead8]
-%   data: {"dataType":"text","outputData":{"text":"Loaded CST SIM-1 G_CST. Deviation from analytic G: 11.630%n","truncated":false}}
+%   data: {"dataType":"text","outputData":{"text":"Loaded CST SIM-1 G_CST. Deviation from analytic G: 0.211%n","truncated":false}}
 %---
