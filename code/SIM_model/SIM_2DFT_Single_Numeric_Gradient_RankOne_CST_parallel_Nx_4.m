@@ -63,12 +63,18 @@ addingPathParentFolderByName('code'); %[output:575b79b3]
 
 Parameters %[output:13a3f178] %[output:137d9f78] %[output:95322163] %[output:0a074d5b] %[output:943238c7] %[output:00016c94] %[output:90c22b23] %[output:221fc7c7] %[output:3d41d18c] %[output:054252fe] %[output:14322d88] %[output:11276de9]
 
-L=27
+
+maxIter=1000
+
+L=12
 zeta=0.988
-maxIter=600
-M_x=30
+M_x=14
 M_y=M_x;
 M=M_y*M_x
+
+N_x=4
+N_y=N_x;
+N=N_x*N_y;
 
 % L=23
 % zeta=0.988
@@ -105,7 +111,7 @@ fileName = sprintf('G_Nx_%d_L_%d_Mx_%d_Zeta_%s_CST.mat', ...
 savepath = fullfile(datasetDir, fileName);
 
 resumeTraining = false;
-extraIter = 500;
+% extraIter = 500;
 
 % ---------------- Checkpoint (partial saving) settings ----------------
 % The training loop below writes a small per-zeta checkpoint file every
@@ -119,7 +125,7 @@ extraIter = 500;
 % only: if eta0, h, or the initialization seed are changed between runs,
 % delete the checkpoints first, otherwise the run continues from the old
 % trajectory.
-checkpointEvery = 5;     % iterations between checkpoint writes
+checkpointEvery = 700;     % iterations between checkpoint writes
 autoResume      = true;  % continue from an existing checkpoint file
 verifyGradient  = true;  % on the first executed iteration, compare the
                          % rank-one gradient against the original full
@@ -383,7 +389,7 @@ for i_zeta = 1:numZeta
 
     for it = it_first:it_end
         it_extra = it - it_start + 1;
-        fprintf('extra iter: %.1f, total iter: %d, zeta: %.4f, Mx: %d, L: %d, ', 100*it_extra/extraIter, it,zeta,M_x,L);
+        fprintf('Iter: %.1f, total iter: %d, zeta: %.4f, Mx: %d, L: %d, ', 100*it_extra/extraIter, it,zeta,M_x,L);
         
         % fprintf('Iteration %.1f %%n', 100*it/maxIter);
 
@@ -518,7 +524,7 @@ for i_zeta = 1:numZeta
         % Learning-rate schedule
         eta_local = eta_local*zeta(i_zeta); % as follows from [Eq. (20), 1]
 
-        fprintf('Loss: %.1f \n', 10*log10(loss_i(it)));
+        fprintf('Loss ratio: %.1f \n', 10*log10(loss_i(it)/norm(F,'fro')^2));
 
         % ---- Periodic checkpoint (partial saving) ---------------------
         % State corresponds to "iteration it fully completed": phases and

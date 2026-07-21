@@ -98,7 +98,7 @@ EnvPars.U_func = @(n_, t_n_) exp(1i * ( ...
 Calibration;
 
 
-EnvPars.MaxEpisodes = EnvPars.N_cal * 100;
+EnvPars.MaxEpisodes = EnvPars.N_cal * 200;
 
 % -------------------------------------------------------------------------
 % Observation override: aligned coherent Re/Im observation
@@ -307,7 +307,7 @@ if ~exist(save_dir, 'dir')
 end
 
 save_path = fullfile(save_dir, sprintf( ...
-    'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_Nx_%d_Mx_%d_Tx_%d_Aligned.mat', EnvPars.N_x, M_x, T_x));
+    'dqn_agent_SIM2_BeamScanMAC_CST_1_layer_L_%d_Nx_%d_Mx_%d_Tx_%d_Aligned.mat', L, EnvPars.N_x, M_x, T_x));
 
 criticNet = getModel(getCritic(agent));
 assertZeroBiases(criticNet, 'after training');

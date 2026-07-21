@@ -40,9 +40,13 @@ t_psi = (t_y_new - 1) * EnvPars.T_x + t_x_new;
 %% Received signal at the new phase configuration
 
 v0 = EnvPars.U_func(1:EnvPars.N, t_psi);
+% v0 = EnvPars.U_func_CST(1:EnvPars.N, t_psi);
 
 r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
            EnvPars.G * diag(v0') * LoggedSignals.h;
+
+% r_signal = sqrt(db2pow(LoggedSignals.SNR_dB)) * ...
+%            EnvPars.G_CST * diag(v0') * LoggedSignals.h;
 
 u = (randn(EnvPars.N,1) + ...
      1i*randn(EnvPars.N,1)) / sqrt(2);
@@ -92,10 +96,18 @@ n_psi_y_max = linear_idx-(n_psi_x_max-1)*EnvPars.N_x;
 
 t_psi_x_max = EnvPars.t_x(t_psi);
 t_psi_y_max = EnvPars.t_y(t_psi);
-LoggedSignals.psi_x_est = mod(2*pi * (n_psi_x_max + (t_psi_x_max) / EnvPars.T_x) / EnvPars.N_x, 2*pi);
-LoggedSignals.psi_y_est = mod(2*pi * (n_psi_y_max + (t_psi_y_max) / EnvPars.T_y) / EnvPars.N_y, 2*pi);
+LoggedSignals.psi_x_est = mod(2*pi * (n_psi_x_max + (t_psi_x_max-1) / EnvPars.T_x) / EnvPars.N_x, 2*pi);
+LoggedSignals.psi_y_est = mod(2*pi * (n_psi_y_max + (t_psi_y_max-1) / EnvPars.T_y) / EnvPars.N_y, 2*pi);
 
 LoggedSignals.error_sum    = 0.5*(abs(LoggedSignals.psi_x - LoggedSignals.psi_x_est) + ...
                                    abs(LoggedSignals.psi_y - LoggedSignals.psi_y_est));
 LoggedSignals.at_peak      = at_peak;
+
+if current_peak > LoggedSignals.best_peak
+    LoggedSignals.best_peak      = current_peak;
+    LoggedSignals.best_t_x       = t_x_new;
+    LoggedSignals.best_t_y       = t_y_new;
+    LoggedSignals.psi_x_est_best = LoggedSignals.psi_x_est;
+    LoggedSignals.psi_y_est_best = LoggedSignals.psi_y_est;
+end
 end
