@@ -1,18 +1,122 @@
 %% Step 1. CALIBRATION ───────────────────────────────────────────────────────EnvPars.psi_x_cal
 fprintf('=== Calibration phase ===\n'); %[output:106d88ec]
 
-% Grid: 1 position per square metre over x_max × y_max
-% Margin keeps MU away from walls
+% % Grid: 1 position per square metre over x_max × y_max
+% % Margin keeps MU away from walls
+% 
+% n_x_cal  = floor(sqrt(EnvPars.N_cal * x_max / y_max));
+% n_y_cal  = floor(EnvPars.N_cal / n_x_cal);
+% x_cal    = linspace(EnvPars.MU_margin, x_max - EnvPars.MU_margin, n_x_cal);
+% y_cal    = linspace(EnvPars.MU_margin, y_max - EnvPars.MU_margin, n_y_cal);
+% [X_cal, Y_cal] = meshgrid(x_cal, y_cal);
+% X_cal    = X_cal(:);
+% Y_cal    = Y_cal(:);
+% N_cal    = numel(X_cal);
+% fprintf('Grid: %d x %d = %d calibration positions\n', n_x_cal, n_y_cal, N_cal); %[output:3da17f4a]
 
-n_x_cal  = floor(sqrt(EnvPars.N_cal * x_max / y_max));
-n_y_cal  = floor(EnvPars.N_cal / n_x_cal);
-x_cal    = linspace(EnvPars.MU_margin, x_max - EnvPars.MU_margin, n_x_cal);
-y_cal    = linspace(EnvPars.MU_margin, y_max - EnvPars.MU_margin, n_y_cal);
-[X_cal, Y_cal] = meshgrid(x_cal, y_cal);
-X_cal    = X_cal(:);
-Y_cal    = Y_cal(:);
-N_cal    = numel(X_cal);
-fprintf('Grid: %d x %d = %d calibration positions\n', n_x_cal, n_y_cal, N_cal); %[output:3da17f4a]
+%% Generate calibration positions for one 120-degree sector
+
+% Spatial separation between calibration points
+calSpacing = EnvPars.calSpacing_m;
+
+assert(calSpacing > 0, ...
+    'EnvPars.calSpacing_m must be strictly positive.');
+
+% Local D x D cell limits
+x_min_cal = EnvPars.MU_margin;
+x_max_cal = EnvPars.x_max - EnvPars.MU_margin;
+
+y_min_cal = EnvPars.MU_margin;
+y_max_cal = EnvPars.y_max - EnvPars.MU_margin;
+
+assert(x_max_cal > x_min_cal && y_max_cal > y_min_cal, ...
+    'The MU margin leaves no valid calibration area.');
+
+% Use cell-centred calibration points.
+%
+% For D = 20 m and calSpacing = 1 m, this produces:
+% x = 0.5, 1.5, ..., 19.5 m
+% y = 0.5, 1.5, ..., 19.5 m
+%
+% Thus, there is approximately one calibration sample per square metre.
+x_cal_full = ...
+    (x_min_cal + calSpacing/2) : ...
+    calSpacing : ...
+    (x_max_cal - calSpacing/2);
+
+y_cal_full = ...
+    (y_min_cal + calSpacing/2) : ...
+    calSpacing : ...
+    (y_max_cal - calSpacing/2);
+
+assert(~isempty(x_cal_full) && ~isempty(y_cal_full), ...
+    'No calibration points were generated. Check the spacing and margin.');
+
+% Complete D x D candidate grid
+[X_cal_full, Y_cal_full] = meshgrid(x_cal_full, y_cal_full);
+
+n_x_cal_full = numel(x_cal_full);
+n_y_cal_full = numel(y_cal_full);
+N_cal_full   = numel(X_cal_full);
+
+%% Determine the selected sector
+
+sectorBoresights_deg = EnvPars.sectorBoresights_deg;
+selectedSector       = EnvPars.selectedSector;
+
+assert(selectedSector >= 1 && ...
+       selectedSector <= numel(sectorBoresights_deg), ...
+    'EnvPars.selectedSector must index sectorBoresights_deg.');
+
+sectorBoresight_deg = ...
+    sectorBoresights_deg(selectedSector);
+
+sectorBoresight = deg2rad(sectorBoresight_deg);
+sectorHalfWidth = deg2rad(EnvPars.sectorHalfWidth_deg);
+
+% Position relative to the SIM/gNB horizontal coordinates
+delta_x = X_cal_full - EnvPars.pos_SIM(1);
+delta_y = Y_cal_full - EnvPars.pos_SIM(2);
+
+% MU azimuth relative to the SIM/gNB
+phi_cal = atan2(delta_y, delta_x);
+
+% Wrapped angular distance from the selected sector boresight
+delta_phi = atan2( ...
+    sin(phi_cal - sectorBoresight), ...
+    cos(phi_cal - sectorBoresight));
+
+% Retain only positions inside the selected 120-degree sector
+sectorMask = abs(delta_phi) <= sectorHalfWidth + 10*eps;
+
+X_cal = X_cal_full(sectorMask);
+Y_cal = Y_cal_full(sectorMask);
+
+% Convert explicitly to column vectors
+X_cal = X_cal(:);
+Y_cal = Y_cal(:);
+
+% Actual number of calibration positions after sector filtering
+N_cal = numel(X_cal);
+
+assert(N_cal > 0, ...
+    'The selected sector contains no calibration positions.');
+
+fprintf( ...
+    'Full local grid: %d x %d = %d candidate positions\n', ...
+    n_x_cal_full, n_y_cal_full, N_cal_full);
+
+fprintf( ...
+    ['Selected sector %d: boresight = %.1f deg, ' ...
+     'angular interval = [%.1f, %.1f] deg\n'], ...
+    selectedSector, ...
+    sectorBoresight_deg, ...
+    sectorBoresight_deg - EnvPars.sectorHalfWidth_deg, ...
+    sectorBoresight_deg + EnvPars.sectorHalfWidth_deg);
+
+fprintf( ...
+    'Calibration positions retained in sector: %d\n', ...
+    N_cal);
 
 % Preallocate calibration tables
 peak_map       = zeros(N_cal, EnvPars.T_x, EnvPars.T_y);

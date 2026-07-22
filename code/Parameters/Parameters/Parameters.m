@@ -46,28 +46,6 @@ EnvPars.MU_margin = 0;
 EnvPars.N_cal = round( ...
     (x_max / EnvPars.calSpacing_m) * ...
     (y_max / EnvPars.calSpacing_m));
-
-% MUltiple sites measurements
-M_meas = 4;       % repeated measurements per site
-N_sites = 2;      % serving site plus one neighbor
-sitePos = [
-    10, 10, 4;       % serving site
-    30, 10, 4        % neighboring site
-];
-
-siteBoresight_deg = [
-      0;             % first site points toward +x
-    180              % second site points toward -x
-];
-
-N_sites = size(sitePos, 1);
-
-x_eval_min = 15;
-x_eval_max = 25;
-
-y_eval_min = 5;
-y_eval_max = 15;
-
 %[text] #### MU mobility parameters
 %time step
 delta_time=0.1;
@@ -312,7 +290,7 @@ EnvPars.mu_lgZSD    = 1.35;
 EnvPars.sigma_lgZSD = 0.35;
 
 % Rician K-factor in dB
-EnvPars.mu_K_dB    = 15;
+EnvPars.mu_K_dB    = 10;
 EnvPars.sigma_K_dB = 8;
 % EnvPars.mu_K_dB    = 7;
 % EnvPars.sigma_K_dB = 8;
