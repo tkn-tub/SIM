@@ -1,8 +1,20 @@
-function [observation, LoggedSignals] = resetFunction_nav_CST_Aligned(EnvPars)
+function [observation, LoggedSignals] = resetFunction_nav_CST_Aligned(EnvPars,pos_idx)
 % Matching reset for the aligned-observation variant.
 
 %% Pick random calibration position
-pos_idx = randi(EnvPars.N_cal);
+%% Pick calibration position
+
+% Preserve the original random-reset behavior when no index is supplied.
+if nargin < 2 || isempty(pos_idx)
+    pos_idx = randi(EnvPars.N_cal);
+end
+
+assert( ...
+    isscalar(pos_idx) && ...
+    pos_idx == round(pos_idx) && ...
+    pos_idx >= 1 && ...
+    pos_idx <= EnvPars.N_cal, ...
+    'Invalid calibration-position index.');
 
 LoggedSignals.pos_idx    = pos_idx;
 LoggedSignals.psi_x      = EnvPars.psi_x_cal(pos_idx);
